@@ -29,7 +29,10 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
     expect(snapshot!.tick).toBe(10)
   })
 
-  it('No-op pipeline produces no events and leaves all numbers unchanged across ticks (other than tick)', () => {
+  it('No-op pipeline produces no events and leaves non-economic numbers unchanged across ticks (other than tick)', () => {
+    // T-008 turns stage 2 into a real producer (sectors + gdp), so this T-006
+    // invariant now covers everything that stage 2 does NOT touch. The
+    // sector-growth + GDP rollup contract is owned by simple_economy.spec.ts.
     const engine = createEngine(createAureliaState(), { seed: 1 })
     const events: EngineEvent[] = []
     engine.subscribe((e) => events.push(e))
@@ -40,16 +43,23 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
       after = engine.tick()
     }
 
-    // No events emitted by no-op stages.
+    // No events emitted by the remaining no-op stages (1, 3, 4, 5, 6, 7).
     expect(events).toEqual([])
 
-    // Everything other than `tick` is unchanged.
+    // Everything other than `tick`, sectors and gdp is unchanged.
     expect(after!.tick).toBe(10)
-    const { tick: _t1, ...beforeRest } = before
-    const { tick: _t2, ...afterRest } = after!
+    const { tick: _t1, country: beforeCountry, ...beforeRest } = before
+    const { tick: _t2, country: afterCountry, ...afterRest } = after!
     void _t1
     void _t2
     expect(afterRest).toEqual(beforeRest)
+    const { sectors: _bs, gdp: _bg, ...beforeCountryRest } = beforeCountry
+    const { sectors: _as, gdp: _ag, ...afterCountryRest } = afterCountry
+    void _bs
+    void _bg
+    void _as
+    void _ag
+    expect(afterCountryRest).toEqual(beforeCountryRest)
   })
 
   it('Decisions queued via applyDecisions are consumed at stage 0 of the next tick() (not the current one)', () => {
@@ -145,10 +155,28 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
     }
     expect(calls).toEqual(expectedNames)
 
-    // (c) Smoke-test runTick itself: it returns a state with all numbers
-    // unchanged (no-op stages) and matches what the manual loop produced.
-    const runTickResult = runTick(createAureliaState(), ctx)
-    expect(runTickResult).toEqual(createAureliaState())
+    // (c) Smoke-test runTick itself against a fresh context — proves it
+    // walks the stage list in order by comparing against the manual loop's
+    // output state. Stage 2 (T-008) now mutates sectors + gdp; everything
+    // else is still no-op, so the two loops must produce identical states
+    // when seeded identically.
+    const ctx2: EngineContext = { emit: () => {}, rng: createRng(1) }
+    let manual = createAureliaState()
+    for (const stage of [
+      stage0_decisions,
+      stage1_world,
+      stage2_economy,
+      stage3_society,
+      stage4_politics,
+      stage5_events,
+      stage6_ai,
+      stage7_feedback,
+    ]) {
+      manual = stage(manual, ctx2)
+    }
+    const ctx3: EngineContext = { emit: () => {}, rng: createRng(1) }
+    const runTickResult = runTick(createAureliaState(), ctx3)
+    expect(runTickResult).toEqual(manual)
   })
 
   // --- Edge cases from the brief --------------------------------------------
