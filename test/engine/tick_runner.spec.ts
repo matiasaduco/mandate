@@ -53,11 +53,11 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
   })
 
   it('Decisions queued via applyDecisions are consumed at stage 0 of the next tick() (not the current one)', () => {
-    // Stage 0 is a no-op in T-006, so we can't assert "consumed = applied".
-    // What we *can* assert is the queue-handoff contract: applyDecisions only
-    // pushes to the queue; the queue is visible to stage 0 of the *next*
-    // tick(), not the current one. We instrument stage0 to snapshot the queue
-    // it sees, and we observe the queue between calls.
+    // Queue-handoff contract: applyDecisions only pushes to the queue; the
+    // queue is drained at stage 0 of the *next* tick(), never the current one.
+    // T-007 actually drains the queue; this test asserts both halves: (a)
+    // queueing does not mutate state in-flight, and (b) after the next tick
+    // the queue is empty.
     const engine = createEngine(createAureliaState(), { seed: 1 })
 
     const d1: Decision = { type: 'slider', slider_id: 'tax_income', value: 30 }
@@ -77,21 +77,18 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
     // the *current* tick number hasn't changed.
     expect(afterTick1.tick).toBe(1)
 
-    // Now run the next tick. Stage 0 is a no-op skeleton in T-006, so the
-    // queue is NOT drained yet — T-007 will add that. But the queue must
-    // contain both decisions in FIFO order at the start of this tick.
-    // We can read the queue off the post-tick snapshot because no stage
-    // touches it.
+    // Now run the next tick. T-007 drains the queue at stage 0, so the
+    // post-tick snapshot must show an empty queue.
     const afterTick2 = engine.tick()
     expect(afterTick2.tick).toBe(2)
-    expect(afterTick2.decision_queue).toEqual([d1, d2])
+    expect(afterTick2.decision_queue).toEqual([])
 
-    // Queuing a decision after tick 2 must NOT have been applied during tick 2:
-    // it lands at stage 0 of tick 3.
+    // Queuing another decision after tick 2 must NOT have been applied during
+    // tick 2: it lands at stage 0 of tick 3 and is drained there.
     engine.applyDecisions([d1])
     const afterTick3 = engine.tick()
     expect(afterTick3.tick).toBe(3)
-    expect(afterTick3.decision_queue).toEqual([d1, d2, d1])
+    expect(afterTick3.decision_queue).toEqual([])
   })
 
   it('Stage execution order matches Tick Pipeline strictly (stages 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7)', () => {
@@ -156,7 +153,12 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
 
   // --- Edge cases from the brief --------------------------------------------
 
-  it('applyDecisions between ticks accumulates FIFO and the queue is empty after a drain (T-007 will drain; here we assert FIFO ordering)', () => {
+  it('applyDecisions between ticks accumulates FIFO and the drain at stage 0 sees every queued decision', () => {
+    // T-006 contract: multiple applyDecisions calls between ticks accumulate
+    // into the queue in FIFO order, and all of them are visible to stage 0 of
+    // the next tick. We prove FIFO visibility by collapsing three same-slider
+    // decisions: per T-007, only the final value persists, so the slider must
+    // end at the third decision's value (30) — not the first or second.
     const engine = createEngine(createAureliaState(), { seed: 1 })
     const d1: Decision = { type: 'slider', slider_id: 'tax_income', value: 10 }
     const d2: Decision = { type: 'slider', slider_id: 'tax_income', value: 20 }
@@ -166,8 +168,11 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
     engine.applyDecisions([d2, d3])
 
     const snap = engine.tick()
-    // Stage 0 is no-op in T-006, so the queue still holds the three in FIFO.
-    expect(snap.decision_queue).toEqual([d1, d2, d3])
+    // Queue is drained at stage 0 of this tick.
+    expect(snap.decision_queue).toEqual([])
+    // The final FIFO decision is the one that persists — proves stage 0 saw
+    // all three in order, not just the first or last one queued.
+    expect(snap.country.sliders.tax_income).toBe(30)
   })
 
   it('subscribing twice and unsubscribing one — only the still-subscribed listener gets called', () => {
