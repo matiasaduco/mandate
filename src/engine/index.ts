@@ -7,6 +7,9 @@ import type {
   EngineState,
 } from './types'
 import { createRng, type Rng } from './rng'
+import { createEventBus } from './events/bus'
+import { runTick } from './pipeline/run'
+import type { EngineContext } from './pipeline/context'
 
 export type {
   Decision,
@@ -22,19 +25,27 @@ export type { Rng } from './rng'
 // createEngine — single entry point for the headless simulation.
 //
 // Contract (see vault: 06 - Reference / Tech Stack § Boundary contract):
-//   - applyDecisions(decisions): UI calls before stage 0 of the next tick.
-//   - tick(): advances one tick and returns a fresh state snapshot.
-//   - subscribe(listener): listens for events fired during the tick.
+//   - applyDecisions(decisions): UI calls before stage 0 of the next tick;
+//     queued decisions are drained at stage 0 of the *next* tick(), never
+//     same-tick (invariant #3).
+//   - tick(): runs stages 0–7 once, advances `state.tick`, flushes buffered
+//     events to subscribers, and returns a fresh snapshot.
+//   - subscribe(listener): listens for events fired at the end of the tick.
 //
-// Phase 1 (T-002): pipeline stages are no-ops; tick() only increments `tick`.
-// They are wired up across T-006 → T-018.
+// T-006 wires the pipeline runner with no-op stages; logic lands in T-007+.
 export function createEngine(initialState: EngineState, options: EngineOptions): Engine {
   let state: EngineState = cloneState(initialState)
   const listeners = new Set<EngineEventListener>()
   const rng: Rng = createRng(options.seed)
-  void rng // wired into stage 2/3/5 randomness in T-008+.
+  const bus = createEventBus(listeners)
+
+  const ctx: EngineContext = {
+    emit: (event: EngineEvent) => bus.emit(event),
+    rng,
+  }
 
   function applyDecisions(decisions: Decision[]): void {
+    // Push-only. The queue is drained at stage 0 of the next tick (T-007).
     state = {
       ...state,
       decision_queue: [...state.decision_queue, ...decisions],
@@ -42,12 +53,12 @@ export function createEngine(initialState: EngineState, options: EngineOptions):
   }
 
   function tick(): EngineState {
-    // Pipeline stages 0–7 will live here (T-006+).
-    // Until then, we just advance the tick counter and return a fresh snapshot.
-    state = {
-      ...state,
-      tick: state.tick + 1,
-    }
+    // Run the full Phase 1 pipeline: stages 0 → 7, in order.
+    state = runTick(state, ctx)
+    // Advance the tick counter once per tick() call.
+    state = { ...state, tick: state.tick + 1 }
+    // Dispatch all events buffered during the stages, then clear the buffer.
+    bus.flush()
     return cloneState(state)
   }
 
@@ -57,15 +68,6 @@ export function createEngine(initialState: EngineState, options: EngineOptions):
       listeners.delete(listener)
     }
   }
-
-  // Reserved for stage runners — emit events through the bus.
-  // Exported as a closed-over helper so stages can call it via the engine context (T-006).
-  function _emit(event: EngineEvent): void {
-    for (const listener of listeners) {
-      listener(event)
-    }
-  }
-  void _emit // currently unused; wired up in T-006.
 
   return { applyDecisions, tick, subscribe }
 }
