@@ -30,9 +30,10 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
   })
 
   it('No-op pipeline produces no events and leaves non-economic numbers unchanged across ticks (other than tick)', () => {
-    // T-008 turns stage 2 into a real producer (sectors + gdp), so this T-006
-    // invariant now covers everything that stage 2 does NOT touch. The
-    // sector-growth + GDP rollup contract is owned by simple_economy.spec.ts.
+    // T-008 turns stage 2 into a real producer (sectors + gdp); T-009 adds
+    // `flows.tax_income`. This T-006 invariant covers everything that stage 2
+    // does NOT touch. The sector-growth + GDP rollup and tax-income flow
+    // contracts are owned by simple_economy.spec.ts.
     const engine = createEngine(createAureliaState(), { seed: 1 })
     const events: EngineEvent[] = []
     engine.subscribe((e) => events.push(e))
@@ -46,12 +47,14 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
     // No events emitted by the remaining no-op stages (1, 3, 4, 5, 6, 7).
     expect(events).toEqual([])
 
-    // Everything other than `tick`, sectors and gdp is unchanged.
+    // Everything other than `tick`, sectors, gdp and `flows` is unchanged.
     expect(after!.tick).toBe(10)
-    const { tick: _t1, country: beforeCountry, ...beforeRest } = before
-    const { tick: _t2, country: afterCountry, ...afterRest } = after!
+    const { tick: _t1, country: beforeCountry, flows: _bf, ...beforeRest } = before
+    const { tick: _t2, country: afterCountry, flows: _af, ...afterRest } = after!
     void _t1
     void _t2
+    void _bf
+    void _af
     expect(afterRest).toEqual(beforeRest)
     const { sectors: _bs, gdp: _bg, ...beforeCountryRest } = beforeCountry
     const { sectors: _as, gdp: _ag, ...afterCountryRest } = afterCountry
