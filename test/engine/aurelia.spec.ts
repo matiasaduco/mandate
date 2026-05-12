@@ -29,6 +29,11 @@ describe('Aurelia fixture (T-005)', () => {
     expect(sum).toBe(400_000)
   })
 
+  it('target_budget is pinned to 100_000 (steady-state tax_income; T-010)', () => {
+    const s = createAureliaState()
+    expect(s.country.target_budget).toBe(100_000)
+  })
+
   it('the 5 budget shares sum to 1.0 (within float tolerance)', () => {
     const { budget_shares } = createAureliaState().country
     const sum =

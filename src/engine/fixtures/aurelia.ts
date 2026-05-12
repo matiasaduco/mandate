@@ -105,6 +105,8 @@ const aureliaCountry: Country = {
   approval: 56,
   legitimacy: 0,
   stability: 65,
+  // P1: pinned to the steady-state tax_income flow (100k credits/tick).
+  target_budget: 100_000,
   pops: aureliaPops,
   sectors: aureliaSectors,
   sliders: { tax_income: 25, tax_corporate: 30, tax_consumption: 15 },
