@@ -47,9 +47,10 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
     // No events emitted by the remaining no-op stages (1, 3, 4, 5, 6, 7).
     expect(events).toEqual([])
 
-    // Everything other than `tick`, sectors, gdp, treasury, and `flows` is
-    // unchanged. (treasury is written by T-010's budget block; flows holds
-    // tax_income / budget_spend / balance.)
+    // Everything other than `tick`, sectors, gdp, treasury, pops, and `flows`
+    // is unchanged. (treasury is written by T-010's budget block; flows holds
+    // tax_income / budget_spend / balance; pops are written by T-011's
+    // income/employment block.)
     expect(after!.tick).toBe(10)
     const { tick: _t1, country: beforeCountry, flows: _bf, ...beforeRest } = before
     const { tick: _t2, country: afterCountry, flows: _af, ...afterRest } = after!
@@ -62,20 +63,24 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
       sectors: _bs,
       gdp: _bg,
       treasury: _bt,
+      pops: _bp,
       ...beforeCountryRest
     } = beforeCountry
     const {
       sectors: _as,
       gdp: _ag,
       treasury: _at,
+      pops: _ap,
       ...afterCountryRest
     } = afterCountry
     void _bs
     void _bg
     void _bt
+    void _bp
     void _as
     void _ag
     void _at
+    void _ap
     expect(afterCountryRest).toEqual(beforeCountryRest)
   })
 
