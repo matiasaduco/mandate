@@ -111,14 +111,33 @@ pnpm build        # tsc -b + vite build (also the typecheck gate)
 pnpm format       # prettier --write .
 ```
 
+## Custom subagents
+
+The repo ships three project-specific subagents under `.claude/agents/`:
+
+- **`vault-context`** *(read-only)* — given a ticket id (`T-NNN`) or system name, reads the Obsidian vault in the documented order and returns a structured implementation brief (Goal, Scope, System Contract, Acceptance Criteria, Edge Cases, Tunables, Fixture refs, Decisions to honor). Run this **before** any implementation work; review the brief; then hand it to a dev agent.
+- **`engine-dev`** — implements engine tickets (T-006…T-018, T-028…T-031). Knows the headless / deterministic / no-literals rules. Writes Vitest specs from AC. Runs `pnpm test`/`lint`/`build`.
+- **`ui-dev`** — implements UI tickets (T-019…T-027). Knows the React 19 + Zustand + Recharts conventions and the engine ↔ UI contract. Writes RTL component tests. Runs `pnpm test`/`lint`/`build` and a visual sanity pass via `pnpm dev` when feasible.
+
+The dev agents do **not** have the `Agent` tool — they cannot recursively call `vault-context`. The orchestrator (the main Claude Code session, or you when running by hand) is responsible for chaining: brief first, review, then implement.
+
 ## How to work on a ticket
 
-1. Open `~/Documents/Tycoon/08 - Tickets/Phase 1 Tickets.md` and find the ticket.
-2. Read the **References** section of the ticket — every linked vault page.
-3. Implement.
-4. Write tests for each Acceptance Criteria item (`test/engine/acceptance/<system>.spec.ts`).
-5. Make the tests pass. Verify `pnpm lint` and `pnpm build` are still green.
-6. When all AC are green: check the boxes on the system page in the vault and reference the test path.
+1. Run `vault-context T-NNN` — review the returned brief.
+2. Hand the brief to `engine-dev` or `ui-dev` depending on the ticket area.
+3. Review the dev agent's report (branch, AC checked, gate results).
+4. Spot-check the diff and tests; merge the PR; verify the vault has its AC boxes checked with test paths.
+
+## GitHub workflow
+
+- **Repo:** [github.com/matiasaduco/mandate](https://github.com/matiasaduco/mandate).
+- **Issue ↔ ticket mapping:** GitHub issue `#N` corresponds 1-to-1 to ticket `T-00N` in `~/Documents/Tycoon/08 - Tickets/Phase 1 Tickets.md`.
+- **Setup bundle (closed):** Issues `#1`–`#5` (T-001 → T-005) shipped together in commit `437f7fa`. This was an exception — strict dependency chain with no independently-testable intermediate states. See vault `Decisions Log` § 2026-05-09.
+- **Default workflow from `#6` onward — branch-per-issue:**
+  - One branch per ticket. Branch name: `t-NNN-short-slug` (e.g., `t-006-tick-runner`).
+  - One PR per branch. PR title references the ticket id; body lists which Acceptance Criteria it satisfies and the test files that prove them. PR closes the matching issue.
+  - Rebase or merge to `main` is fine; keep history readable.
+  - Bundling multiple tickets in one PR requires the same justification as the setup bundle (strict dependency + no independent testability) and an entry in the vault `Decisions Log`.
 
 ## Commit conventions
 
