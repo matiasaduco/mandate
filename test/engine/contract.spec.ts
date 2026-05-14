@@ -22,7 +22,10 @@ describe('engine contract (T-002)', () => {
     a.decision_queue.push({ type: 'slider', slider_id: 'tax_income', value: 50 })
     const c = engine.tick()
     expect(c.tick).toBe(3)
-    expect(c.country.treasury).toBe(50_000)
+    // Treasury drifts under T-010 (stage 2 writes it each tick), so we no
+    // longer pin a literal here — we only assert the poisoned -1 we wrote
+    // into snapshot `a` did not bleed back into the engine.
+    expect(c.country.treasury).not.toBe(-1)
     expect(c.decision_queue).toHaveLength(0)
   })
 

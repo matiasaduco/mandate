@@ -51,6 +51,14 @@ export type Country = {
   /** Derived 0–100. Owner: Country Core. */
   stability: number
 
+  /**
+   * Per-tick budget target in credits. P1: pinned to a constant set by the
+   * fixture (no auto-sync with `tax_income`, no player slider yet). P2+ will
+   * let the player override via decision queue. Stage 2 reads this AS-IS each
+   * tick and does NOT overwrite it.
+   */
+  target_budget: number
+
   // Inputs grouped on the country (sliders + sector / POP collections)
   pops: POP[]
   sectors: Sector[]
