@@ -14,6 +14,13 @@ export type POP = {
   education_level: number
   /** Per-tick derived flow (income owner: Simple Economy). */
   income: number
+  /**
+   * True iff the POP's post-tax income computation underflowed below 0 in the
+   * current tick and was clamped to 0. Set by stage 3 (POP Types). T-012's
+   * happiness curve consumes this as an "income shock" signal so the clamp
+   * doesn't silently mask punitive tax states from downstream systems.
+   */
+  income_clamped: boolean
   /** 0–1 */
   employment_rate: number
   /** 0–100, derived from priorities outcomes (HAPPINESS_RANGE). */
