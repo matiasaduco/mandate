@@ -46,6 +46,13 @@ export type GameStoreState = {
   setSpeed: (speed: number) => void
 }
 
+/**
+ * Listener invoked synchronously when the engine emits an event. Provided so
+ * UI code (e.g. T-020's `useTickLoop` auto-pause) can react to threshold
+ * crossings without polling the `events` array on every render.
+ */
+export type GameStoreEventListener = (event: EngineEvent) => void
+
 export type GameStoreOptions = {
   /** PRNG seed for the engine. Required so tests can lock determinism. */
   seed: number
@@ -70,6 +77,19 @@ export type GameStore = UseBoundStore<StoreApi<GameStoreState>> & {
   engine: Engine
   /** Tear down the engine subscription (used by tests that recreate stores). */
   destroy: () => void
+  /**
+   * T-020 — Forward to the engine's event bus. UI code (`useTickLoop` for the
+   * auto-pause hook) subscribes here instead of touching `engine.subscribe`
+   * directly, keeping the engine ↔ UI boundary contained to the store. Returns
+   * an unsubscribe function. Listeners fire synchronously inside `tick()`
+   * (during `bus.flush()`), so any state writes the listener performs (e.g.
+   * `setSpeed(0)`) take effect immediately and are observable in the same
+   * microtask the tick loop is in.
+   *
+   * Note: named `subscribeToEvents` (not `subscribe`) to avoid clashing with
+   * Zustand's built-in `store.subscribe(stateListener)` API for state changes.
+   */
+  subscribeToEvents: (listener: GameStoreEventListener) => () => void
 }
 
 /**
@@ -128,6 +148,10 @@ export function createGameStore(options: GameStoreOptions): GameStore {
   boundStore.destroy = () => {
     unsubscribe()
   }
+  // T-020: thin passthrough to the engine event bus. UI hooks (`useTickLoop`)
+  // use this for auto-pause subscriptions so the engine handle stays private.
+  boundStore.subscribeToEvents = (listener: GameStoreEventListener) =>
+    engine.subscribe(listener)
   return boundStore
 }
 
