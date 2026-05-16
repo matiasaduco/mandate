@@ -7,8 +7,14 @@
 //     target the same slider, only the final clamped value persists and a
 //     single `PolicyChanged` is emitted with `old_value` = the pre-stage value
 //     and `new_value` = the final clamped value.
-//   - Decree decisions: emit `DecreeIssued` per decision; effect application
-//     lands in T-018.
+//   - Decree decisions (T-018): look up the catalog entry, check the cost
+//     gate (`cost_treasury <= treasury`), silently reject if it fails (no
+//     event), otherwise subtract the cost from treasury, push the resolved
+//     `ActiveDecree` onto `state.active_decrees` (replace-on-reissue: any
+//     existing entry with the same `decree_id` is dropped first), and emit
+//     `DecreeIssued` with the real cost + effect. Effect application happens
+//     at stage 2 (output_boost) and stage 3 (happiness_bump_*); stage 3 also
+//     decrements `ticks_remaining` and prunes expired entries.
 //
 // Out-of-range slider values clamp silently to the range bounds with a
 // `console.warn` (no throw) — engine-internal hygiene per
@@ -20,6 +26,8 @@
 
 import type { Country, BudgetShares, SlidersState } from '../entities/Country'
 import type { SliderDecision, DecreeDecision, SliderId } from '../entities/Decision'
+import type { ActiveDecree, DecreeEffect } from '../entities/Decree'
+import { DECREE_CATALOG_P1 } from '../entities/Decree'
 import type { EngineState } from '../types'
 import type { EngineContext } from './context'
 import {
@@ -151,17 +159,51 @@ export function stage0_decisions(state: EngineState, ctx: EngineContext): Engine
     })
   }
 
-  // Decrees: dispatch only. Effect application + treasury cost land in T-018.
+  // Decrees (T-018): cost gate → treasury subtract → replace-on-reissue push
+  // to active_decrees → emit DecreeIssued with the resolved cost + effect.
+  // Silent reject when the cost gate fails — no event, no warn (the UI
+  // pre-gates the decree button per Decision Mechanics AC; this is the
+  // engine's defensive backstop).
+  let activeDecrees: ActiveDecree[] = state.active_decrees
   for (const decision of decreeDecisions) {
+    const entry = DECREE_CATALOG_P1[decision.decree_id]
+
+    // Cost gate: silent reject. Compare against the *running* treasury so a
+    // prior decree in the same drain that already spent the treasury doesn't
+    // get bypassed by a later one in the same queue.
+    if (entry.cost_treasury > nextCountry.treasury) {
+      continue
+    }
+
+    // Subtract the cost immediately.
+    nextCountry = {
+      ...nextCountry,
+      treasury: nextCountry.treasury - entry.cost_treasury,
+    }
+
+    // Resolve the effect: for happiness_bump_target, override the catalog's
+    // placeholder `target_pop` with the player-supplied value when present.
+    const effect: DecreeEffect =
+      entry.effect.type === 'happiness_bump_target' && decision.target_pop !== undefined
+        ? { ...entry.effect, target_pop: decision.target_pop }
+        : entry.effect
+
+    // Replace-on-reissue: drop any prior active entry with the same id, then
+    // append the new one with a fresh ticks_remaining.
+    const filtered = activeDecrees.filter((d) => d.decree_id !== decision.decree_id)
+    const fresh: ActiveDecree = {
+      decree_id: decision.decree_id,
+      ticks_remaining: entry.duration_ticks,
+      effect,
+    }
+    activeDecrees = [...filtered, fresh]
+
     ctx.emit({
       type: 'DecreeIssued',
       decree_id: decision.decree_id,
-      // T-018: replace `cost: 0` and `effect: null` with values read from the
-      // decree catalog (src/engine/entities/Decree.ts), and subtract `cost`
-      // from `country.treasury` during stage 2.
       ...(decision.target_pop !== undefined ? { target_pop: decision.target_pop } : {}),
-      cost: 0,
-      effect: null,
+      cost: entry.cost_treasury,
+      effect,
       tick: state.tick,
     })
   }
@@ -170,6 +212,7 @@ export function stage0_decisions(state: EngineState, ctx: EngineContext): Engine
     ...state,
     country: nextCountry,
     decision_queue: [],
+    active_decrees: activeDecrees,
   }
 }
 

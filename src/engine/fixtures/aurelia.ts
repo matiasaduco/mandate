@@ -155,5 +155,7 @@ export function createAureliaState(): EngineState {
     // Empty = no threshold has ever fired yet. Populated by stage 4 on first
     // crossing.
     approval_threshold_last_fired_tick: {},
+    // T-018: no decrees in flight on a fresh game.
+    active_decrees: [],
   }
 }
