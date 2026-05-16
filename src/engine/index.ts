@@ -53,6 +53,14 @@ export function createEngine(initialState: EngineState, options: EngineOptions):
   }
 
   function tick(): EngineState {
+    // T-016: once `game_over` is set, all subsequent tick() calls are no-ops.
+    // We return the current state snapshot unchanged WITHOUT advancing the
+    // tick counter, running the pipeline, or flushing the event bus. This
+    // guard lives at the runner level (rather than inside runTick or stage 7)
+    // so stages 0–6 cannot execute and emit stray events after game-over.
+    if (state.game_over) {
+      return cloneState(state)
+    }
     // Run the full Phase 1 pipeline: stages 0 → 7, in order.
     state = runTick(state, ctx)
     // Advance the tick counter once per tick() call.
