@@ -58,6 +58,24 @@
 // pre-noise starting state every POP's computed income matches its declared
 // `income` exactly. This satisfies T-011 AC #1 by construction up to stage-2
 // sector noise.
+//
+// T-018 — active decrees (happiness_bump_*):
+//   After the T-011 income + T-012 happiness/smoothing pass has run, walk
+//   `state.active_decrees` and apply each happiness-bump effect as a
+//   POST-SMOOTHING direct write (`pop.happiness += delta`, then clamp). The
+//   bump bypasses T-012's inertia for immediate feel; the effect persists for
+//   N ticks while `ticks_remaining > 0`, then fades naturally because T-012
+//   continues to pull happiness back towards the priority-driven raw.
+//   `output_boost` effects are ignored here (consumed by stage 2).
+//
+//   Stage 3 is the LAST stage that reads `active_decrees`, so it also
+//   DECREMENTS `ticks_remaining` for every active decree (whether or not its
+//   effect applied this stage) and PRUNES entries whose counter has hit 0.
+//   Decrementing in only one place avoids double-decrement.
+//
+//   When `active_decrees` is empty (the steady-state path) all of this is a
+//   no-op so the T-011 / T-012 / T-013 / T-014 / T-016 determinism locks stay
+//   byte-stable.
 
 import type { EngineState } from '../types'
 import type { Country } from '../entities/Country'
@@ -301,12 +319,43 @@ export function stage3_society(state: EngineState, _ctx: EngineContext): EngineS
     }
   })
 
+  // --- T-018: apply happiness-bump decrees, then decrement + prune ------
+  // Pure pass-through (identical references) when active_decrees is empty,
+  // so the T-011/T-012 determinism locks stay byte-stable on the steady-state
+  // Aurelia path. Consumes zero PRNG draws.
+  let postDecreesPops = updatedPops
+  for (const decree of state.active_decrees) {
+    if (decree.ticks_remaining <= 0) continue
+    if (decree.effect.type === 'happiness_bump_all') {
+      const { delta } = decree.effect
+      postDecreesPops = postDecreesPops.map((p) => ({
+        ...p,
+        happiness: clampHappiness(p.happiness + delta),
+      }))
+    } else if (decree.effect.type === 'happiness_bump_target') {
+      const { target_pop, delta } = decree.effect
+      postDecreesPops = postDecreesPops.map((p) =>
+        p.pop_type === target_pop
+          ? { ...p, happiness: clampHappiness(p.happiness + delta) }
+          : p,
+      )
+    }
+    // output_boost: consumed by stage 2; ignored here.
+  }
+
+  // Stage 3 owns the decrement-and-prune: counters tick down once per game
+  // tick, and entries that hit 0 (or below — defensively) are removed.
+  const nextActiveDecrees = state.active_decrees
+    .map((d) => ({ ...d, ticks_remaining: d.ticks_remaining - 1 }))
+    .filter((d) => d.ticks_remaining > 0)
+
   return {
     ...state,
     country: {
       ...country,
-      pops: updatedPops,
+      pops: postDecreesPops,
     },
+    active_decrees: nextActiveDecrees,
   }
 }
 

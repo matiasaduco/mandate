@@ -5,6 +5,7 @@
 
 import type { Country } from './entities/Country'
 import type { Decision, SliderId, DecreeId } from './entities/Decision'
+import type { ActiveDecree, DecreeEffect } from './entities/Decree'
 import type { PopType } from './entities/POP'
 import type { GameSpeed, GameOverReason, LossCounters } from './entities/GameControl'
 
@@ -28,6 +29,11 @@ export type {
   SliderState,
   DecreeDef,
 } from './entities/Decision'
+export type {
+  ActiveDecree,
+  DecreeEffect,
+  DecreeCatalogEntry,
+} from './entities/Decree'
 export type { GameSpeed, GameOverReason, LossCounters } from './entities/GameControl'
 
 export type EngineState = {
@@ -65,6 +71,16 @@ export type EngineState = {
    * Lives on EngineState so save/load (T-028) preserves it across reloads.
    */
   approval_threshold_last_fired_tick: Record<number, number>
+  /**
+   * In-flight decrees, populated by stage 0 (T-018). Each entry carries the
+   * remaining duration in ticks and the resolved effect. Stage 2 reads
+   * `output_boost` effects; stage 3 reads `happiness_bump_*` effects, then
+   * decrements `ticks_remaining` for every active decree and prunes any whose
+   * counter has hit 0. Lives on EngineState so save/load (T-028) preserves
+   * the in-flight effects across reloads. Initialized to `[]` in
+   * `createAureliaState()`.
+   */
+  active_decrees: ActiveDecree[]
 }
 
 export type TickFlows = {
@@ -86,7 +102,13 @@ export type EngineEvent =
       decree_id: DecreeId
       target_pop?: PopType
       cost: number
-      effect: unknown
+      /**
+       * Resolved effect at issue time. T-018 populates this from the catalog;
+       * for `happiness_bump_target` decrees the `target_pop` on the effect is
+       * the player-supplied target from the `DecreeDecision`, not the
+       * catalog placeholder. Always non-null when the event fires.
+       */
+      effect: DecreeEffect
       tick: number
     }
   | {

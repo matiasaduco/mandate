@@ -68,6 +68,19 @@
 // `sector.pollution_coefficient` is tracked but never consumed (Phase 4+).
 // `INDUSTRY_POLLUTION_COEFFICIENT` from tunables mirrors the industry sector's
 // pollution_coefficient in Aurelia (0.1) — see ../tunables.ts.
+//
+// T-018 — active decrees (output_boost):
+//   Applied immediately after T-008 sector growth (before tax_income rollup
+//   and dampening). For each `ActiveDecree` whose effect is `output_boost`
+//   and `ticks_remaining > 0`, the matching sector's output is multiplied by
+//   `1 + pct`. The boost therefore contributes to tax_income this tick AND to
+//   the dampening base. When the decree expires (stage 3 prunes it), output
+//   stays at its boosted level — there is no snap-back in P1. Decrement +
+//   prune are owned by stage 3 (the last stage that reads active_decrees).
+//   Reading active_decrees here is a same-tick read of state written by
+//   stage 0 (invariant #4: stage 2 may read state written by stage 0). When
+//   active_decrees is empty (the steady-state path) this code is a complete
+//   no-op so the T-008 / T-009 / T-010 determinism locks stay byte-stable.
 
 import type { EngineState } from '../types'
 import type { Sector } from '../entities/Sector'
@@ -145,7 +158,22 @@ export function stage2_economy(state: EngineState, ctx: EngineContext): EngineSt
     }
   })
 
-  const rawGdpPreTax = grownSectors.reduce((sum, s) => sum + s.output, 0)
+  // --- T-018: apply active output_boost decrees ------------------------
+  // Multiplicative boost on the matching sector's post-growth output. Pure
+  // pass-through (identical reference) when no boost decrees are active, so
+  // the T-008 / T-009 / T-010 determinism locks stay byte-stable on the
+  // steady-state Aurelia path. Consumes zero PRNG draws.
+  let boostedSectors: Sector[] = grownSectors
+  for (const decree of state.active_decrees) {
+    if (decree.ticks_remaining <= 0) continue
+    if (decree.effect.type !== 'output_boost') continue
+    const { sector: targetSector, pct } = decree.effect
+    boostedSectors = boostedSectors.map((s) =>
+      s.sector_type === targetSector ? { ...s, output: s.output * (1 + pct) } : s,
+    )
+  }
+
+  const rawGdpPreTax = boostedSectors.reduce((sum, s) => sum + s.output, 0)
   const gdpPreTax = rawGdpPreTax < 0 ? 0 : rawGdpPreTax
   if (rawGdpPreTax < 0) {
     console.warn(`stage2_economy: country.gdp clamped to 0 (raw=${rawGdpPreTax}).`)
@@ -169,8 +197,8 @@ export function stage2_economy(state: EngineState, ctx: EngineContext): EngineSt
   const dampening = taxDampening(effective_rate)
   const dampenedSectors: Sector[] =
     dampening === 1
-      ? grownSectors
-      : grownSectors.map((sector) => ({ ...sector, output: sector.output * dampening }))
+      ? boostedSectors
+      : boostedSectors.map((sector) => ({ ...sector, output: sector.output * dampening }))
 
   // Re-roll GDP so the `country.gdp = Σ sector.output` invariant holds at
   // the end of the stage even after dampening.
