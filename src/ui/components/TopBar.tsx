@@ -25,6 +25,7 @@
 
 import { SPEEDS } from '@engine/tunables'
 import { formatCalendar } from '@ui/components/calendar'
+import { formatNumber, formatPercent } from '@ui/components/format'
 import {
   getGameStore,
   type GameStore,
@@ -39,16 +40,6 @@ export type TopBarProps = {
    * the component then resolves the singleton via `getGameStore()`.
    */
   store?: GameStore
-}
-
-/** Treasury formatter: thousand separators, no decimals. Negatives keep sign. */
-function formatTreasury(value: number): string {
-  return value.toLocaleString('en-US', { maximumFractionDigits: 0 })
-}
-
-/** Approval formatter: integer 0–100. */
-function formatApproval(value: number): string {
-  return String(Math.round(value))
 }
 
 export function TopBar({ store }: TopBarProps) {
@@ -92,11 +83,11 @@ export function TopBar({ store }: TopBarProps) {
       <div className="topbar__stats">
         <div className="topbar__stat" data-testid="treasury">
           <span className="topbar__stat-label">Treasury</span>
-          <span className="topbar__stat-value">{formatTreasury(treasury)}</span>
+          <span className="topbar__stat-value">{formatNumber(treasury)}</span>
         </div>
         <div className="topbar__stat" data-testid="approval">
           <span className="topbar__stat-label">Approval</span>
-          <span className="topbar__stat-value">{formatApproval(approval)}</span>
+          <span className="topbar__stat-value">{formatPercent(approval)}</span>
         </div>
       </div>
 

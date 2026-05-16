@@ -18,13 +18,76 @@ import { create, type StoreApi, type UseBoundStore } from 'zustand'
 
 import { createEngine } from '@engine'
 import { createAureliaState } from '@engine/fixtures/aurelia'
-import { EVENT_FEED_LENGTH } from '@engine/tunables'
+import { EVENT_FEED_LENGTH, TREND_HISTORY_TICKS } from '@engine/tunables'
 import type {
   Decision,
   Engine,
   EngineEvent,
   EngineState,
 } from '@engine'
+
+/**
+ * Scalar series tracked by the rolling trend buffers consumed by
+ * `OverviewPanel` (T-022) and any other UI surface that needs a sparkline.
+ * Fixed set in Phase 1 — the panel renders one sparkline per key.
+ */
+export type TrendKey = 'population' | 'gdp' | 'treasury' | 'approval' | 'stability'
+
+export type Trends = Record<TrendKey, number[]>
+
+/**
+ * Capacity for each trend buffer, mirrored from the vault tunable so the UI
+ * never inlines the literal. Re-exported so panel code can size axes / labels
+ * off the same value without re-importing from the engine tunables module.
+ */
+export const TREND_BUFFER_CAPACITY = TREND_HISTORY_TICKS
+
+/** Sample the five tracked scalars from an engine snapshot. */
+function sampleTrendValues(snapshot: EngineState): Record<TrendKey, number> {
+  return {
+    population: snapshot.country.population,
+    gdp: snapshot.country.gdp,
+    treasury: snapshot.country.treasury,
+    approval: snapshot.country.approval,
+    stability: snapshot.country.stability,
+  }
+}
+
+/**
+ * Build an initial trends container seeded with the starting snapshot value
+ * for each tracked scalar. Length 1 per buffer at construction (pre-tick).
+ */
+function seedTrends(snapshot: EngineState): Trends {
+  const sample = sampleTrendValues(snapshot)
+  return {
+    population: [sample.population],
+    gdp: [sample.gdp],
+    treasury: [sample.treasury],
+    approval: [sample.approval],
+    stability: [sample.stability],
+  }
+}
+
+/**
+ * Append the latest snapshot values to each buffer, trimming the oldest entry
+ * once we exceed `TREND_HISTORY_TICKS`. Returns a new Trends object — never
+ * mutates the input (Zustand requires referential change to notify).
+ */
+function pushTrendSample(prev: Trends, snapshot: EngineState): Trends {
+  const sample = sampleTrendValues(snapshot)
+  const append = (buf: number[], value: number): number[] => {
+    const next = buf.length >= TREND_HISTORY_TICKS ? buf.slice(1) : buf.slice()
+    next.push(value)
+    return next
+  }
+  return {
+    population: append(prev.population, sample.population),
+    gdp: append(prev.gdp, sample.gdp),
+    treasury: append(prev.treasury, sample.treasury),
+    approval: append(prev.approval, sample.approval),
+    stability: append(prev.stability, sample.stability),
+  }
+}
 
 export type GameStoreState = {
   /** Latest engine snapshot. Read-only from the UI's perspective. */
@@ -37,6 +100,14 @@ export type GameStoreState = {
    * is just a state write here.
    */
   speed: number
+  /**
+   * T-022 — Rolling per-scalar history of the last `TREND_HISTORY_TICKS`
+   * snapshots. Each buffer starts at length 1 (seeded with the starting
+   * snapshot's value) and grows by 1 per `advance()`, capped at
+   * `TREND_HISTORY_TICKS` (oldest dropped on overflow). The UI consumes these
+   * buffers via narrow selectors — no derived state on the engine.
+   */
+  trends: Trends
 
   /** Run one engine tick and store the resulting snapshot. */
   advance: () => void
@@ -111,10 +182,18 @@ export function createGameStore(options: GameStoreOptions): GameStore {
     snapshot: seedState,
     events: [],
     speed: initialSpeed,
+    // T-022: seed the trend buffers with one sample of the starting state so
+    // the OverviewPanel can render a (1-point) sparkline on first paint without
+    // a guard for empty arrays. Subsequent advance() calls append one sample
+    // each, capped at TREND_HISTORY_TICKS.
+    trends: seedTrends(seedState),
 
     advance: () => {
       const nextSnapshot = engine.tick()
-      set({ snapshot: nextSnapshot })
+      set((prev) => ({
+        snapshot: nextSnapshot,
+        trends: pushTrendSample(prev.trends, nextSnapshot),
+      }))
     },
 
     enqueueDecision: (decision: Decision) => {
