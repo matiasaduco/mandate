@@ -48,10 +48,11 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
     expect(events).toEqual([])
 
     // Everything other than `tick`, sectors, gdp, treasury, pops, approval,
-    // approval_by_pop, and `flows` is unchanged. (treasury is written by
-    // T-010's budget block; flows holds tax_income / budget_spend / balance;
-    // pops are written by T-011's income/employment block; approval +
-    // approval_by_pop are written by T-013's stage 4; approval_prev +
+    // approval_by_pop, stability, and `flows` is unchanged. (treasury is
+    // written by T-010's budget block; flows holds tax_income / budget_spend /
+    // balance; pops are written by T-011's income/employment block; approval +
+    // approval_by_pop are written by T-013's stage 4; stability is written by
+    // T-014's stage 4 part 2; approval_prev +
     // approval_threshold_last_fired_tick are the EngineState-side debounce
     // bookkeeping for stage 4.)
     expect(after!.tick).toBe(10)
@@ -87,6 +88,7 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
       pops: _bp,
       approval: _ba,
       approval_by_pop: _babp,
+      stability: _bst,
       ...beforeCountryRest
     } = beforeCountry
     const {
@@ -96,6 +98,7 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
       pops: _ap,
       approval: _aa,
       approval_by_pop: _aabp,
+      stability: _ast,
       ...afterCountryRest
     } = afterCountry
     void _bs
@@ -104,12 +107,14 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
     void _bp
     void _ba
     void _babp
+    void _bst
     void _as
     void _ag
     void _at
     void _ap
     void _aa
     void _aabp
+    void _ast
     expect(afterCountryRest).toEqual(beforeCountryRest)
   })
 
