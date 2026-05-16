@@ -14,6 +14,7 @@ dist-ssr
 
 # Claude Code local config / installed skills
 .claude/settings.local.json
+.claude/skills/
 .agents/
 skills-lock.json
 
