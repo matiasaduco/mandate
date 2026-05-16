@@ -148,6 +148,10 @@ export function createAureliaState(): EngineState {
     rng_state: 0,
     flows: { tax_income: 100_000, budget_spend: 100_000, balance: 0 },
     approval_prev: 56,
+    // T-015: comparator for stage 5's treasury-crossing detection. Mirrors the
+    // starting country.treasury (50_000) so the first tick can detect a fresh
+    // crossing if the player drains immediately.
+    treasury_prev: 50_000,
     // Empty = no threshold has ever fired yet. Populated by stage 4 on first
     // crossing.
     approval_threshold_last_fired_tick: {},

@@ -45,6 +45,18 @@ export type EngineState = {
   /** Previous tick's approval, used for threshold-crossing detection (stage 4). */
   approval_prev: number
   /**
+   * Previous tick's treasury value (the post-stage-2 treasury from the end of
+   * the prior tick). Stage 5 (T-015) reads this together with the freshly
+   * stage-2-written `country.treasury` to detect threshold crossings (e.g.
+   * crossing below 0 from a non-negative value) and emit
+   * `TreasuryThresholdCrossed`. At the end of stage 5 this is rewritten to the
+   * just-observed `country.treasury` so the next tick's comparison is correct.
+   * Lives on EngineState so save/load (T-028) preserves the comparator across
+   * reloads. Initialized to Aurelia's starting treasury in
+   * `createAureliaState()`.
+   */
+  treasury_prev: number
+  /**
    * Debounce state for stage-4 ApprovalThresholdCrossed emission. Maps each
    * threshold value (numeric key) to the tick at which it most recently fired.
    * If a threshold is missing from the map, it has never fired. Stage 4 skips
