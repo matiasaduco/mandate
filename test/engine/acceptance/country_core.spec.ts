@@ -18,34 +18,18 @@
 // STARTING_TREASURY_P1 changed.
 
 import { describe, expect, it, vi } from 'vitest'
-import { createEngine } from '../../../src/engine'
-import { createAureliaState } from '../../../src/engine/fixtures/aurelia'
-import { stage4_politics } from '../../../src/engine/pipeline/stage4_politics'
-import type { EngineEvent } from '../../../src/engine/types'
-import type { EngineContext } from '../../../src/engine/pipeline/context'
-import type { Rng } from '../../../src/engine/rng'
-
-// Stage 4 consumes the PRNG zero times, so the methods just need to be
-// callable. We make a dummy Rng that satisfies the type but won't ever be
-// invoked in this test file.
-function makeDummyRng(): Rng {
-  let s = 0
-  return {
-    next: () => 0,
-    nextRange: () => 0,
-    getState: () => s,
-    setState: (next: number) => {
-      s = next
-    },
-  }
-}
+import { createAureliaState } from '@engine/fixtures/aurelia'
+import { createFixtureEngine, makeDummyRng } from '@test-utils'
+import { stage4_politics } from '@engine/pipeline/stage4_politics'
+import type { EngineEvent } from '@engine/types'
+import type { EngineContext } from '@engine/pipeline/context'
 
 describe('T-014 stage 4 part 2 — country stability derivation', () => {
   it('On Aurelia start, country.stability ≈ 65 within ±5', () => {
     // Calibrator-computed prediction: 68.51961743958916 (within [60, 70]).
     // Derivation: approval=55.985 × 0.7 + (48883.169/50000) × 30
     //           = 39.190 + 29.330 = 68.520.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const snap = engine.tick()
     expect(Math.abs(snap.country.stability - 65)).toBeLessThanOrEqual(5)
   })
@@ -54,7 +38,7 @@ describe('T-014 stage 4 part 2 — country stability derivation', () => {
     // Run 5 ticks. At each tick, hand-compute the expected stability from the
     // tick's approval and treasury and assert it matches. Any drift would
     // mean a subsystem outside stage 4 wrote to stability.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     for (let t = 0; t < 5; t++) {
       const snap = engine.tick()
       const treasuryHealth = Math.min(
@@ -127,7 +111,7 @@ describe('T-014 stage 4 part 2 — country stability derivation', () => {
   it('Stability clamp does not fire during normal Aurelia play (clamp is defensive-only in P1)', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     try {
-      const engine = createEngine(createAureliaState(), { seed: 1 })
+      const engine = createFixtureEngine()
       for (let t = 0; t < 10; t++) engine.tick()
       const stabilityWarnCalls = warnSpy.mock.calls.filter(
         (c) => typeof c[0] === 'string' && c[0].includes('[stability clamp]'),
@@ -192,7 +176,7 @@ describe('T-014 stage 4 part 2 — country stability derivation', () => {
     // The lint rule no-loss-of-precision blocks the full 16-digit literal
     // (JS doubles only carry ~15.95 decimal digits), so we hand-construct
     // the same value from its arithmetic factors and assert via toBeCloseTo.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const snap = engine.tick()
     // Reconstruct the locked value from upstream-locked T-013 approval and
     // T-010 treasury (both have their own determinism locks in

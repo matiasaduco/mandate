@@ -21,21 +21,21 @@
 // smoothing formula changed.
 
 import { describe, expect, it } from 'vitest'
-import { createEngine } from '../../../src/engine'
-import { createAureliaState } from '../../../src/engine/fixtures/aurelia'
+import { createAureliaState } from '@engine/fixtures/aurelia'
+import { createFixtureEngine } from '@test-utils'
 import {
   APPROVAL_CEILING,
   APPROVAL_FLOOR,
   APPROVAL_INERTIA_TAU,
-} from '../../../src/engine/tunables'
-import type { Decision, EngineEvent } from '../../../src/engine/types'
+} from '@engine/tunables'
+import type { Decision, EngineEvent } from '@engine/types'
 
 describe('T-013 stage 4 — approval rollup + smoothing + threshold events', () => {
   it('On Aurelia start, country.approval ≈ 56 within ±1', () => {
     // Aurelia's approval_prev starts at 56. With T-012's post-tick happiness
     // values and POP sizes, the size-weighted raw rollup is ~55.94; one tick
     // of TAU=4 smoothing pulls approval to ~55.985 — well inside the ±1 band.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const snap = engine.tick()
     expect(Math.abs(snap.country.approval - 56)).toBeLessThan(1)
   })
@@ -49,7 +49,7 @@ describe('T-013 stage 4 — approval rollup + smoothing + threshold events', () 
     // stage-4 smoothing to land the drop somewhere in [5, 10] after 4 ticks.
     // We assert the looser bound and document the interaction in the brief.
     const baseline = createAureliaState()
-    const engineBaseline = createEngine(baseline, { seed: 1 })
+    const engineBaseline = createFixtureEngine({ state: baseline })
     let baseSnap = engineBaseline.tick()
     for (let i = 1; i < APPROVAL_INERTIA_TAU; i++) {
       baseSnap = engineBaseline.tick()
@@ -60,7 +60,7 @@ describe('T-013 stage 4 — approval rollup + smoothing + threshold events', () 
     for (const pop of shifted.country.pops) {
       pop.happiness = Math.max(0, pop.happiness - 10)
     }
-    const engineShifted = createEngine(shifted, { seed: 1 })
+    const engineShifted = createFixtureEngine({ state: shifted })
     let shiftedSnap = engineShifted.tick()
     for (let i = 1; i < APPROVAL_INERTIA_TAU; i++) {
       shiftedSnap = engineShifted.tick()
@@ -90,7 +90,7 @@ describe('T-013 stage 4 — approval rollup + smoothing + threshold events', () 
       for (const pop of state.country.pops) pop.happiness = 0
       state.approval_prev = APPROVAL_FLOOR
       state.country.approval = APPROVAL_FLOOR
-      const engine = createEngine(state, { seed: 1 })
+      const engine = createFixtureEngine({ state })
       for (let t = 0; t < 5; t++) {
         const snap = engine.tick()
         expect(snap.country.approval).toBeGreaterThanOrEqual(APPROVAL_FLOOR)
@@ -102,7 +102,7 @@ describe('T-013 stage 4 — approval rollup + smoothing + threshold events', () 
       for (const pop of state.country.pops) pop.happiness = 100
       state.approval_prev = APPROVAL_CEILING
       state.country.approval = APPROVAL_CEILING
-      const engine = createEngine(state, { seed: 1 })
+      const engine = createFixtureEngine({ state })
       for (let t = 0; t < 5; t++) {
         const snap = engine.tick()
         expect(snap.country.approval).toBeGreaterThanOrEqual(APPROVAL_FLOOR)
@@ -124,7 +124,7 @@ describe('T-013 stage 4 — approval rollup + smoothing + threshold events', () 
     state.approval_prev = 30.1
     state.country.approval = 30.1
     for (const pop of state.country.pops) pop.happiness = 5
-    const engine = createEngine(state, { seed: 1 })
+    const engine = createFixtureEngine({ state })
 
     const events: EngineEvent[] = []
     engine.subscribe((e) => events.push(e))
@@ -177,7 +177,7 @@ describe('T-013 stage 4 — approval rollup + smoothing + threshold events', () 
       // pop.happiness = 5 (not 25) for the same reason as the previous test —
       // T-012's stage-3 smoothing pulls toward priority-driven raws ~50–70.
       for (const pop of state.country.pops) pop.happiness = 5
-      const engine = createEngine(state, { seed: 1 })
+      const engine = createFixtureEngine({ state })
 
       const events: EngineEvent[] = []
       engine.subscribe((e) => events.push(e))
@@ -205,7 +205,7 @@ describe('T-013 stage 4 — approval rollup + smoothing + threshold events', () 
       state.country.approval = 30.1
       state.approval_threshold_last_fired_tick = { [APPROVAL_THRESHOLD_30]: 0 }
       for (const pop of state.country.pops) pop.happiness = 5
-      const engine = createEngine(state, { seed: 1 })
+      const engine = createFixtureEngine({ state })
 
       const events: EngineEvent[] = []
       engine.subscribe((e) => events.push(e))
@@ -228,7 +228,7 @@ describe('T-013 stage 4 — approval rollup + smoothing + threshold events', () 
     // happiness materially (the others' priority outcomes don't shift this
     // tick); the size-weighted rollup falls slightly to ~55.95 and the smoothed
     // approval lands at ≈ 55.954 — within the AC's [54.6, 56.6] band.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const d: Decision = { type: 'slider', slider_id: 'tax_income', value: 30 }
     engine.applyDecisions([d])
     const snap = engine.tick()
@@ -243,7 +243,7 @@ describe('T-013 stage 4 — approval rollup + smoothing + threshold events', () 
     // either (a) an upstream rng draw moved (would also break T-008/T-009/
     // T-010/T-011/T-012 locks), (b) APPROVAL_INERTIA_TAU/FLOOR/CEILING
     // changed, or (c) the size-weighted rollup or smoothing formula changed.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const snap = engine.tick()
 
     // Approval — size-weighted rollup of post-T-012 pop.happiness, smoothed

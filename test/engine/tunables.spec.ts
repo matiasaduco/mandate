@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import * as Tunables from '../../src/engine/tunables'
+import * as Tunables from '@engine/tunables'
 
 // These values mirror ~/Documents/Tycoon/06 - Reference/Tunables.md.
 // If a test fails, either the vault changed or the export drifted — sync them

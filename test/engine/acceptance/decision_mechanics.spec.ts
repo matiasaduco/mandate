@@ -13,12 +13,12 @@
 // Plus the edge cases called out in the brief.
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createEngine } from '../../../src/engine'
-import { createAureliaState } from '../../../src/engine/fixtures/aurelia'
-import type { Decision, EngineEvent } from '../../../src/engine/types'
-import { TAX_INCOME_RANGE } from '../../../src/engine/tunables'
+import { createAureliaState } from '@engine/fixtures/aurelia'
+import { createFixtureEngine } from '@test-utils'
+import type { Decision, Engine, EngineEvent } from '@engine/types'
+import { TAX_INCOME_RANGE } from '@engine/tunables'
 
-function collectEvents(engine: ReturnType<typeof createEngine>): EngineEvent[] {
+function collectEvents(engine: Engine): EngineEvent[] {
   const events: EngineEvent[] = []
   engine.subscribe((e) => events.push(e))
   return events
@@ -30,7 +30,7 @@ afterEach(() => {
 
 describe('T-007 stage 0 — apply queued decisions', () => {
   it('Queueing a single slider change applies it at the next stage 0, exactly once', () => {
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const events = collectEvents(engine)
 
     // Aurelia starts with tax_income = 25 (see fixture).
@@ -58,7 +58,7 @@ describe('T-007 stage 0 — apply queued decisions', () => {
   })
 
   it('Queueing two changes to the same slider in the same pause window results in only the final value applied; one PolicyChanged emitted with old_value = pre-pause value, new_value = final', () => {
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const events = collectEvents(engine)
 
     // Two changes to the same slider during the same pause window.
@@ -89,7 +89,7 @@ describe('T-007 stage 0 — apply queued decisions', () => {
     const [min, max] = TAX_INCOME_RANGE
 
     // (a) Above the max → clamps to max.
-    const engineHigh = createEngine(createAureliaState(), { seed: 1 })
+    const engineHigh = createFixtureEngine()
     const eventsHigh = collectEvents(engineHigh)
     engineHigh.applyDecisions([
       { type: 'slider', slider_id: 'tax_income', value: max + 25 },
@@ -101,7 +101,7 @@ describe('T-007 stage 0 — apply queued decisions', () => {
     expect(policyHigh[0]).toMatchObject({ new_value: max })
 
     // (b) Below the min → clamps to min.
-    const engineLow = createEngine(createAureliaState(), { seed: 1 })
+    const engineLow = createFixtureEngine()
     engineLow.applyDecisions([{ type: 'slider', slider_id: 'tax_income', value: min - 10 }])
     const snapLow = engineLow.tick()
     expect(snapLow.country.sliders.tax_income).toBe(min)
@@ -118,7 +118,7 @@ describe('T-007 stage 0 — apply queued decisions', () => {
   it('PolicyChanged and DecreeIssued carry tick = the tick in which they were applied', () => {
     // The drain happens at stage 0 of the tick being processed; `state.tick`
     // is pre-increment, so a queue applied to tick N emits with `tick: N`.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const events = collectEvents(engine)
 
     // Tick 0 → 1: emitted events should carry tick=0.
@@ -160,7 +160,7 @@ describe('T-007 stage 0 — apply queued decisions', () => {
     // Reinforces AC #2 with three same-slider decisions split across two
     // applyDecisions calls — proves FIFO visibility across calls *and*
     // single-event collapsing in the same assertion.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const events = collectEvents(engine)
 
     engine.applyDecisions([{ type: 'slider', slider_id: 'tax_income', value: 28 }])
@@ -178,7 +178,7 @@ describe('T-007 stage 0 — apply queued decisions', () => {
 
   it('Slider clamping beyond range → log + clamp, no throw', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
 
     expect(() => {
       engine.applyDecisions([
@@ -191,7 +191,7 @@ describe('T-007 stage 0 — apply queued decisions', () => {
   })
 
   it('Decree emission carries tick = state.tick of the tick being processed (pre-increment)', () => {
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const events = collectEvents(engine)
 
     // Advance a few ticks first so we are not asserting on tick 0.
@@ -219,7 +219,7 @@ describe('T-007 stage 0 — apply queued decisions', () => {
 
   it('Budget slider decisions write to country.budget_shares (not country.sliders) and clamp to [0,1]', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const events = collectEvents(engine)
 
     engine.applyDecisions([
@@ -242,7 +242,7 @@ describe('T-007 stage 0 — apply queued decisions', () => {
 
   it('Decree decisions emit one DecreeIssued each and do not mutate sliders or budget_shares', () => {
     const before = createAureliaState()
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const events = collectEvents(engine)
 
     engine.applyDecisions([
@@ -278,7 +278,7 @@ describe('T-007 stage 0 — apply queued decisions', () => {
   })
 
   it('Empty decision_queue is a no-op: no events, no state mutation', () => {
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const events = collectEvents(engine)
 
     const before = createAureliaState()
@@ -294,7 +294,7 @@ describe('T-007 stage 0 — apply queued decisions', () => {
 
   it('Setting a slider to its current value emits no PolicyChanged (no-op write is silent)', () => {
     // Aurelia starts with tax_income = 25. Re-applying 25 should be a no-op.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const events = collectEvents(engine)
 
     engine.applyDecisions([{ type: 'slider', slider_id: 'tax_income', value: 25 }])

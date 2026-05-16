@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createRng } from '../../src/engine/rng'
+import { createRng } from '@engine/rng'
 
 describe('seeded PRNG (T-003)', () => {
   it('two RNGs with the same seed produce identical sequences', () => {
