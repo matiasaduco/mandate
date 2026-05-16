@@ -60,6 +60,17 @@ Also update the **Status** line at the top of each ticket entry in `Phase 1 Tick
 
 Update the **Progress** counter at the top of `Phase 1 Tickets.md` (e.g., "Phase 1: 12 / 31 done") to reflect the new total.
 
+## Sandbox limitation (known)
+
+Claude Code's default subagent sandbox restricts `Edit` to the project working directory (`~/Projects/mandate`) and `/tmp`. The vault at `~/Documents/Tycoon` is OUTSIDE the working directory, so `Edit` calls against it **will fail with "permission denied"** unless the user has explicitly granted vault-write access via `.claude/settings.json` or `.claude/settings.local.json`.
+
+**Default behavior:** detect the block on your first `Edit` attempt; if it fails:
+1. STOP attempting edits — don't keep retrying.
+2. Finish the read-only analysis (Read/Grep/Glob/Bash all work fine).
+3. Return the full plan as a structured set of `OLD ↔ NEW` diffs in the report so the orchestrator can apply them in the main context (where Edit on the vault is permitted).
+
+The orchestrator-applied path is the current default — don't burn tokens retrying.
+
 ## Rules
 
 - **Edit, never Write.** You are surgically updating existing files. Never rewrite a page wholesale.
