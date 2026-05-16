@@ -44,6 +44,15 @@ export type EngineState = {
   flows: TickFlows
   /** Previous tick's approval, used for threshold-crossing detection (stage 4). */
   approval_prev: number
+  /**
+   * Debounce state for stage-4 ApprovalThresholdCrossed emission. Maps each
+   * threshold value (numeric key) to the tick at which it most recently fired.
+   * If a threshold is missing from the map, it has never fired. Stage 4 skips
+   * re-emission while `(state.tick - last_fired) < APPROVAL_INERTIA_TAU`,
+   * preventing event spam under sub-TAU oscillation around a threshold.
+   * Lives on EngineState so save/load (T-028) preserves it across reloads.
+   */
+  approval_threshold_last_fired_tick: Record<number, number>
 }
 
 export type TickFlows = {

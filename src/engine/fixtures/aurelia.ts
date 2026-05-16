@@ -108,6 +108,15 @@ const aureliaCountry: Country = {
   gdp: 400_000,
   treasury: 50_000,
   approval: 56,
+  // Mirrors each Aurelia POP's starting `happiness` keyed by `pop_type`. Stage
+  // 4 (T-013) overwrites this every tick from current POP happiness.
+  approval_by_pop: {
+    urban_workers: 55,
+    rural_workers: 50,
+    middle_class: 60,
+    capitalists: 70,
+    intelligentsia: 58,
+  },
   legitimacy: 0,
   stability: 65,
   // P1: pinned to the steady-state tax_income flow (100k credits/tick).
@@ -139,5 +148,8 @@ export function createAureliaState(): EngineState {
     rng_state: 0,
     flows: { tax_income: 100_000, budget_spend: 100_000, balance: 0 },
     approval_prev: 56,
+    // Empty = no threshold has ever fired yet. Populated by stage 4 on first
+    // crossing.
+    approval_threshold_last_fired_tick: {},
   }
 }

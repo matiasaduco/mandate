@@ -1,4 +1,4 @@
-import type { POP } from './POP'
+import type { POP, PopType } from './POP'
 import type { Sector } from './Sector'
 
 // Field names mirror ~/Documents/Tycoon/06 - Reference/Data Model.md § Country.
@@ -46,6 +46,11 @@ export type Country = {
   treasury: number
   /** Derived 0–100. Owner: Approval & Legitimacy. */
   approval: number
+  /** Per-POP approval contributions, exposed for UI breakdown (T-025).
+   *  In P1 this equals each POP's `happiness` keyed by `pop_type`. Written by
+   *  stage 4 every tick. Partial because a fixture without a given POP type
+   *  yields no entry. */
+  approval_by_pop: Partial<Record<PopType, number>>
   /** Phase 2+. Owner: Approval & Legitimacy. Stored from P1 for forward-compat. */
   legitimacy: number
   /** Derived 0–100. Owner: Country Core. */
