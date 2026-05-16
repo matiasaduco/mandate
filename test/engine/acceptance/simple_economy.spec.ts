@@ -15,6 +15,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createEngine } from '../../../src/engine'
 import { createAureliaState } from '../../../src/engine/fixtures/aurelia'
 import { taxDampening } from '../../../src/engine/pipeline/stage2_economy'
+import { stage5_events } from '../../../src/engine/pipeline/stage5_events'
+import type { EngineContext } from '../../../src/engine/pipeline/context'
+import type { Rng } from '../../../src/engine/rng'
 import {
   BUDGET_CATEGORIES_P1,
   TAX_DAMPENING_BREAKPOINT,
@@ -22,7 +25,7 @@ import {
   TAX_CORPORATE_RANGE,
   TAX_CONSUMPTION_RANGE,
 } from '../../../src/engine/tunables'
-import type { Decision } from '../../../src/engine/types'
+import type { Decision, EngineEvent } from '../../../src/engine/types'
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -540,5 +543,130 @@ describe('T-010 — Stage 2: budget spend + treasury balance', () => {
     expect(snap.flows.budget_spend).toBe(100_000)
     expect(snap.flows.balance).toBeCloseTo(-1116.8310163225979, 6)
     expect(snap.country.treasury).toBeCloseTo(48883.1689836774, 6)
+  })
+})
+
+describe('T-015 stage 5 — treasury threshold events', () => {
+  // Stage 5 (T-015) consumes the PRNG zero times. The methods just need to be
+  // callable for the direct-stage-invocation tests below.
+  function makeDummyRng(): Rng {
+    let s = 0
+    return {
+      next: () => 0,
+      nextRange: () => 0,
+      getState: () => s,
+      setState: (next: number) => {
+        s = next
+      },
+    }
+  }
+
+  it('When treasury crosses below 0, TreasuryThresholdCrossed is emitted exactly once', () => {
+    // Drive a crossing through the full engine.tick() path: start treasury at
+    // 10_000 and pin target_budget at 200_000 so balance is ~-101_000 and
+    // post-stage-2 treasury lands at ~-91_000 (strictly < 0). The stage-5
+    // crossing detector reads treasury_prev=10_000 (>= 0) vs treasury_next < 0
+    // → fires once.
+    const state = createAureliaState()
+    state.country.treasury = 10_000
+    state.treasury_prev = 10_000
+    state.country.target_budget = 200_000
+    const engine = createEngine(state, { seed: 1 })
+
+    const events: EngineEvent[] = []
+    engine.subscribe((e) => events.push(e))
+
+    const snap = engine.tick()
+
+    expect(snap.country.treasury).toBeLessThan(0)
+    const crossings = events.filter(
+      (e) => e.type === 'TreasuryThresholdCrossed' && e.threshold === 0,
+    )
+    expect(crossings).toHaveLength(1)
+    expect(crossings[0]).toEqual({
+      type: 'TreasuryThresholdCrossed',
+      direction: 'below',
+      threshold: 0,
+      // T-007 convention: pre-increment. Aurelia starts tick=0; stage 5 fires
+      // with state.tick=0 BEFORE index.ts post-increments to 1.
+      tick: 0,
+    })
+    // treasury_prev is rewritten at end of stage 5 to the just-observed value.
+    expect(snap.treasury_prev).toBe(snap.country.treasury)
+  })
+
+  it('If treasury rises above 0 and crosses below again, TreasuryThresholdCrossed re-fires', () => {
+    // No debounce on treasury crossings. Sequence 3 stage-5 invocations directly
+    // (cleaner than running 3 full ticks):
+    //   call A: prev=10, next=-5 → fire 1
+    //   call B: prev=-5, next=5  → no fire (no longer crossing)
+    //   call C: prev=5,  next=-3 → fire 2
+    const events: EngineEvent[] = []
+    const ctx: EngineContext = { emit: (e) => events.push(e), rng: makeDummyRng() }
+
+    const a = createAureliaState()
+    a.tick = 1
+    a.treasury_prev = 10
+    a.country.treasury = -5
+    stage5_events(a, ctx)
+
+    const b = createAureliaState()
+    b.tick = 2
+    b.treasury_prev = -5
+    b.country.treasury = 5
+    stage5_events(b, ctx)
+
+    const c = createAureliaState()
+    c.tick = 3
+    c.treasury_prev = 5
+    c.country.treasury = -3
+    stage5_events(c, ctx)
+
+    const crossings = events.filter((e) => e.type === 'TreasuryThresholdCrossed')
+    expect(crossings).toHaveLength(2)
+    expect(crossings[0]).toMatchObject({ direction: 'below', threshold: 0, tick: 1 })
+    expect(crossings[1]).toMatchObject({ direction: 'below', threshold: 0, tick: 3 })
+  })
+
+  it('No threshold event fires when treasury equals 0 (strict < boundary)', () => {
+    // Per Loss Conditions edge case "No threshold event fires when treasury
+    // equals 0 with balance >= 0". The strict `<` boundary in stage 5 already
+    // handles this regardless of balance sign. Test both sub-cases:
+    //   (a) prev=10, next=0  → no fire (treasury landed AT the threshold, not
+    //       below it).
+    //   (b) prev=0,  next=0  → no fire (no movement).
+    const events: EngineEvent[] = []
+    const ctx: EngineContext = { emit: (e) => events.push(e), rng: makeDummyRng() }
+
+    const a = createAureliaState()
+    a.treasury_prev = 10
+    a.country.treasury = 0
+    stage5_events(a, ctx)
+
+    const b = createAureliaState()
+    b.treasury_prev = 0
+    b.country.treasury = 0
+    stage5_events(b, ctx)
+
+    const crossings = events.filter((e) => e.type === 'TreasuryThresholdCrossed')
+    expect(crossings).toHaveLength(0)
+  })
+
+  it('Determinism lock for seed=1: treasury_prev is updated to country.treasury after each tick on Aurelia', () => {
+    // Aurelia starts at treasury=50_000, treasury_prev=50_000. After tick 1,
+    // T-010 writes country.treasury to its locked value (48_883.169) and stage 5
+    // mirrors it onto treasury_prev. No TreasuryThresholdCrossed fires
+    // (treasury stays well above 0).
+    const events: EngineEvent[] = []
+    const engine = createEngine(createAureliaState(), { seed: 1 })
+    engine.subscribe((e) => events.push(e))
+    const snap = engine.tick()
+
+    expect(snap.country.treasury).toBeCloseTo(48883.1689836774, 6)
+    expect(snap.treasury_prev).toBe(snap.country.treasury)
+    const treasuryCrossings = events.filter(
+      (e) => e.type === 'TreasuryThresholdCrossed',
+    )
+    expect(treasuryCrossings).toHaveLength(0)
   })
 })

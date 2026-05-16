@@ -54,7 +54,8 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
     // approval_by_pop are written by T-013's stage 4; stability is written by
     // T-014's stage 4 part 2; approval_prev +
     // approval_threshold_last_fired_tick are the EngineState-side debounce
-    // bookkeeping for stage 4.)
+    // bookkeeping for stage 4; treasury_prev is updated every tick by T-015's
+    // stage 5 as the comparator for the next tick's crossing check.)
     expect(after!.tick).toBe(10)
     const {
       tick: _t1,
@@ -62,6 +63,7 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
       flows: _bf,
       approval_prev: _bap,
       approval_threshold_last_fired_tick: _bat,
+      treasury_prev: _btp,
       ...beforeRest
     } = before
     const {
@@ -70,6 +72,7 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
       flows: _af,
       approval_prev: _aap,
       approval_threshold_last_fired_tick: _aat,
+      treasury_prev: _atp,
       ...afterRest
     } = after!
     void _t1
@@ -78,8 +81,10 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
     void _af
     void _bap
     void _bat
+    void _btp
     void _aap
     void _aat
+    void _atp
     expect(afterRest).toEqual(beforeRest)
     const {
       sectors: _bs,
