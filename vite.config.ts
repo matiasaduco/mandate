@@ -7,6 +7,7 @@ import react from '@vitejs/plugin-react'
 // shares this config with Vitest, so both runtime and test resolution agree.
 const alias = {
   '@engine': fileURLToPath(new URL('./src/engine', import.meta.url)),
+  '@ui': fileURLToPath(new URL('./src/ui', import.meta.url)),
   '@test-utils': fileURLToPath(new URL('./test/helpers', import.meta.url)),
 }
 

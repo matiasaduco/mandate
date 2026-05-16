@@ -33,6 +33,7 @@
     "paths": {
       "@engine": ["./src/engine/index.ts"],
       "@engine/*": ["./src/engine/*"],
+      "@ui/*": ["./src/ui/*"],
       "@test-utils": ["./test/helpers.ts"]
     }
   },
