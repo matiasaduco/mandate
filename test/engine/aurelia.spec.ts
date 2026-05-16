@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { createAureliaState } from '../../src/engine/fixtures/aurelia'
+import { createAureliaState } from '@engine/fixtures/aurelia'
 import {
   TAX_INCOME_RANGE,
   TAX_CORPORATE_RANGE,
   TAX_CONSUMPTION_RANGE,
-} from '../../src/engine/tunables'
+} from '@engine/tunables'
 
 describe('Aurelia fixture (T-005)', () => {
   it('createAureliaState() returns a valid EngineState', () => {

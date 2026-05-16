@@ -4,24 +4,24 @@
 // starting state (no invented fixture data).
 
 import { describe, expect, it, vi } from 'vitest'
-import { createEngine } from '../../src/engine'
-import { createAureliaState } from '../../src/engine/fixtures/aurelia'
-import { STAGES, runTick, type Stage } from '../../src/engine/pipeline/run'
-import { stage0_decisions } from '../../src/engine/pipeline/stage0_decisions'
-import { stage1_world } from '../../src/engine/pipeline/stage1_world'
-import { stage2_economy } from '../../src/engine/pipeline/stage2_economy'
-import { stage3_society } from '../../src/engine/pipeline/stage3_society'
-import { stage4_politics } from '../../src/engine/pipeline/stage4_politics'
-import { stage5_events } from '../../src/engine/pipeline/stage5_events'
-import { stage6_ai } from '../../src/engine/pipeline/stage6_ai'
-import { stage7_feedback } from '../../src/engine/pipeline/stage7_feedback'
-import type { EngineContext } from '../../src/engine/pipeline/context'
-import { createRng } from '../../src/engine/rng'
-import type { Decision, EngineEvent, EngineState } from '../../src/engine/types'
+import { createAureliaState } from '@engine/fixtures/aurelia'
+import { createFixtureEngine } from '@test-utils'
+import { STAGES, runTick, type Stage } from '@engine/pipeline/run'
+import { stage0_decisions } from '@engine/pipeline/stage0_decisions'
+import { stage1_world } from '@engine/pipeline/stage1_world'
+import { stage2_economy } from '@engine/pipeline/stage2_economy'
+import { stage3_society } from '@engine/pipeline/stage3_society'
+import { stage4_politics } from '@engine/pipeline/stage4_politics'
+import { stage5_events } from '@engine/pipeline/stage5_events'
+import { stage6_ai } from '@engine/pipeline/stage6_ai'
+import { stage7_feedback } from '@engine/pipeline/stage7_feedback'
+import type { EngineContext } from '@engine/pipeline/context'
+import { createRng } from '@engine/rng'
+import type { Decision, EngineEvent, EngineState } from '@engine/types'
 
 describe('T-006 tick runner + stages skeleton + decision queue', () => {
   it('Calling tick() 10× advances state.tick from 0 to 10', () => {
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     let snapshot: EngineState | null = null
     for (let i = 0; i < 10; i++) {
       snapshot = engine.tick()
@@ -34,7 +34,7 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
     // `flows.tax_income`. This T-006 invariant covers everything that stage 2
     // does NOT touch. The sector-growth + GDP rollup and tax-income flow
     // contracts are owned by simple_economy.spec.ts.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const events: EngineEvent[] = []
     engine.subscribe((e) => events.push(e))
 
@@ -129,7 +129,7 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
     // T-007 actually drains the queue; this test asserts both halves: (a)
     // queueing does not mutate state in-flight, and (b) after the next tick
     // the queue is empty.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
 
     const d1: Decision = { type: 'slider', slider_id: 'tax_income', value: 30 }
     const d2: Decision = { type: 'decree', decree_id: 'public_address' }
@@ -248,7 +248,7 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
     // the next tick. We prove FIFO visibility by collapsing three same-slider
     // decisions: per T-007, only the final value persists, so the slider must
     // end at the third decision's value (30) — not the first or second.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const d1: Decision = { type: 'slider', slider_id: 'tax_income', value: 10 }
     const d2: Decision = { type: 'slider', slider_id: 'tax_income', value: 20 }
     const d3: Decision = { type: 'slider', slider_id: 'tax_income', value: 30 }
@@ -277,7 +277,7 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
     // Instead, exercise the subscribe/unsubscribe contract directly — the bus
     // is fully covered by the bus.spec.ts unit (none exists yet) and the
     // current contract.spec.ts already covers tick() with two listeners.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const a = vi.fn()
     const b = vi.fn()
     const unsubA = engine.subscribe(a)

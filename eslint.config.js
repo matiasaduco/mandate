@@ -30,9 +30,32 @@ export default defineConfig([
       ],
     },
   },
+  // Path-alias hygiene: forbid `../../` deep relative imports across src/ and
+  // test/. Use @engine/* or @test-utils instead (mirrored in tsconfig.app.json
+  // paths + vite.config.ts resolve.alias). Single `../` is fine for sibling
+  // intra-module imports.
+  {
+    files: ['src/**/*.{ts,tsx}', 'test/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['../../**'],
+              message: 'Use @engine/* or @test-utils alias instead of crossing 2+ levels (../../X). See tsconfig.app.json paths.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   // Engine boundary: keep src/engine headless and deterministic.
   // The engine must not import from src/ui, React, the DOM, or any UI library;
   // and it must never call Math.random (use the seeded PRNG injected at createEngine).
+  // NOTE: this `no-restricted-imports` block REPLACES the alias-hygiene rule
+  // above for files under src/engine/ (ESLint config blocks don't merge same
+  // rules — last one wins). So we re-include the `../../**` ban here.
   {
     files: ['src/engine/**/*.{ts,tsx}'],
     rules: {
@@ -48,6 +71,10 @@ export default defineConfig([
             {
               group: ['recharts', 'recharts/*', 'zustand', 'zustand/*'],
               message: 'Engine is headless — no UI library imports.',
+            },
+            {
+              group: ['../../**'],
+              message: 'Use @engine/* alias instead of crossing 2+ levels (../../X). See tsconfig.app.json paths.',
             },
           ],
         },

@@ -25,14 +25,14 @@
 // happiness + radicalization (T-012) values at seed=1.
 
 import { describe, expect, it } from 'vitest'
-import { createEngine } from '../../../src/engine'
-import { createAureliaState } from '../../../src/engine/fixtures/aurelia'
+import { createAureliaState } from '@engine/fixtures/aurelia'
+import { createFixtureEngine } from '@test-utils'
 import {
   HAPPINESS_INERTIA_TAU,
   HAPPINESS_RANGE,
   TAX_CORPORATE_RANGE,
-} from '../../../src/engine/tunables'
-import type { Decision } from '../../../src/engine/types'
+} from '@engine/tunables'
+import type { Decision } from '@engine/types'
 
 describe('T-011 stage 3 — POP income & employment', () => {
   it('On Aurelia start, after 1 tick, each POPs income is within ±2% of its starting value', () => {
@@ -41,7 +41,7 @@ describe('T-011 stage 3 — POP income & employment', () => {
     // exactly. Stage 2 introduces ±0.5% sector noise, so post-tick incomes
     // drift well under the ±2% acceptance band.
     const initial = createAureliaState()
-    const engine = createEngine(initial, { seed: 1 })
+    const engine = createFixtureEngine({ state: initial })
 
     const startingByType = new Map(
       initial.country.pops.map((p) => [p.pop_type, p.income] as const),
@@ -64,7 +64,7 @@ describe('T-011 stage 3 — POP income & employment', () => {
     const sumAtStart = initial.country.pops.reduce((acc, p) => acc + p.size, 0)
     expect(initial.country.population).toBe(sumAtStart)
 
-    const engine = createEngine(initial, { seed: 1 })
+    const engine = createFixtureEngine({ state: initial })
     let snap = engine.tick()
     for (let i = 0; i < 4; i++) {
       snap = engine.tick()
@@ -85,7 +85,7 @@ describe('T-011 stage 3 — POP income & employment', () => {
       initial.country.pops.map((p) => [p.pop_type, p.income] as const),
     )
 
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const d: Decision = { type: 'slider', slider_id: 'tax_income', value: 30 }
     engine.applyDecisions([d])
     const snap = engine.tick()
@@ -132,7 +132,7 @@ describe('T-011 stage 3 — POP income & employment', () => {
       tax_corporate: 30,
       tax_consumption: 40,
     }
-    const engine = createEngine(state, { seed: 1 })
+    const engine = createFixtureEngine({ state })
     const snap = engine.tick()
 
     // For non-capitalist POPs the multiplier is -0.20 → clamp fires.
@@ -160,7 +160,7 @@ describe('T-011 stage 3 — POP income & employment', () => {
     // (c) the tax-multiplier formula changed, or (d) the capitalists
     // composite-sector mapping moved off industry+services 50/50. Update
     // only if the change is intentional.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const snap = engine.tick()
 
     const byType = new Map(snap.country.pops.map((p) => [p.pop_type, p] as const))
@@ -200,7 +200,7 @@ describe('T-012 stage 3 — POP happiness from priorities', () => {
       initial.country.pops.map((p) => [p.pop_type, p.happiness] as const),
     )
 
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const snap = engine.tick()
 
     for (const pop of snap.country.pops) {
@@ -230,7 +230,7 @@ describe('T-012 stage 3 — POP happiness from priorities', () => {
     }
     const startingUrban = state.country.pops.find((p) => p.pop_type === 'urban_workers')!.happiness
 
-    const engine = createEngine(state, { seed: 1 })
+    const engine = createFixtureEngine({ state })
     let snap = engine.tick()
     for (let i = 1; i < HAPPINESS_INERTIA_TAU; i++) {
       snap = engine.tick()
@@ -251,7 +251,7 @@ describe('T-012 stage 3 — POP happiness from priorities', () => {
     const initial = createAureliaState()
     const startingCap = initial.country.pops.find((p) => p.pop_type === 'capitalists')!.happiness
 
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const d: Decision = {
       type: 'slider',
       slider_id: 'tax_corporate',
@@ -272,7 +272,7 @@ describe('T-012 stage 3 — POP happiness from priorities', () => {
 
     // Regime A: default Aurelia state.
     {
-      const engine = createEngine(createAureliaState(), { seed: 1 })
+      const engine = createFixtureEngine()
       for (let t = 0; t < TICKS; t++) {
         const snap = engine.tick()
         for (const pop of snap.country.pops) {
@@ -302,7 +302,7 @@ describe('T-012 stage 3 — POP happiness from priorities', () => {
         security: 1,
         welfare: 0,
       }
-      const engine = createEngine(state, { seed: 1 })
+      const engine = createFixtureEngine({ state })
       for (let t = 0; t < TICKS; t++) {
         const snap = engine.tick()
         for (const pop of snap.country.pops) {
@@ -325,7 +325,7 @@ describe('T-012 stage 3 — POP happiness from priorities', () => {
         security: 0,
         welfare: 1,
       }
-      const engine = createEngine(state, { seed: 1 })
+      const engine = createFixtureEngine({ state })
       for (let t = 0; t < TICKS; t++) {
         const snap = engine.tick()
         for (const pop of snap.country.pops) {
@@ -346,7 +346,7 @@ describe('T-012 stage 3 — POP happiness from priorities', () => {
     // smoothing, not the post-1-tick value; we use the brief's ±2 band
     // (54.5..58.5) which the smoothed value lands within (just at the upper
     // edge: 58.33 ≤ 58.5).
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const d: Decision = { type: 'slider', slider_id: 'tax_income', value: 30 }
     engine.applyDecisions([d])
     const snap = engine.tick()
@@ -368,7 +368,7 @@ describe('T-012 stage 3 — POP happiness from priorities', () => {
     // changed, (d) a priority resolver was added/removed/re-mapped, or (e)
     // the income-clamp penalty / radicalization decay rule changed. Update
     // only if the change is intentional.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const snap = engine.tick()
 
     const byType = new Map(snap.country.pops.map((p) => [p.pop_type, p] as const))

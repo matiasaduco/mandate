@@ -22,7 +22,19 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+
+    /* Path aliases — mirrored in vite.config.ts (resolve.alias) so Vite +
+       Vitest agree at runtime. Lint forbids `../../` deep relative imports
+       in src/ and test/ — use these aliases instead. With
+       moduleResolution "bundler", `paths` are resolved relative to this
+       tsconfig file's directory, so `baseUrl` is unnecessary (and deprecated
+       in TS 7.0). */
+    "paths": {
+      "@engine": ["./src/engine/index.ts"],
+      "@engine/*": ["./src/engine/*"],
+      "@test-utils": ["./test/helpers.ts"]
+    }
   },
   "include": ["src", "test"]
 }

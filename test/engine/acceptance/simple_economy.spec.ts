@@ -12,20 +12,19 @@
 // Plus the edge cases called out in the brief.
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createEngine } from '../../../src/engine'
-import { createAureliaState } from '../../../src/engine/fixtures/aurelia'
-import { taxDampening } from '../../../src/engine/pipeline/stage2_economy'
-import { stage5_events } from '../../../src/engine/pipeline/stage5_events'
-import type { EngineContext } from '../../../src/engine/pipeline/context'
-import type { Rng } from '../../../src/engine/rng'
+import { createAureliaState } from '@engine/fixtures/aurelia'
+import { createFixtureEngine, makeDummyRng } from '@test-utils'
+import { taxDampening } from '@engine/pipeline/stage2_economy'
+import { stage5_events } from '@engine/pipeline/stage5_events'
+import type { EngineContext } from '@engine/pipeline/context'
 import {
   BUDGET_CATEGORIES_P1,
   TAX_DAMPENING_BREAKPOINT,
   TAX_INCOME_RANGE,
   TAX_CORPORATE_RANGE,
   TAX_CONSUMPTION_RANGE,
-} from '../../../src/engine/tunables'
-import type { Decision, EngineEvent } from '../../../src/engine/types'
+} from '@engine/tunables'
+import type { Decision, EngineEvent } from '@engine/types'
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -34,7 +33,7 @@ afterEach(() => {
 describe('T-008 stage 2 — sectors + GDP', () => {
   it('On Aurelia start, after 1 tick, each sector output drifts by < 1% of starting value (steady-state, deterministic given seed)', () => {
     const initial = createAureliaState()
-    const engine = createEngine(initial, { seed: 1 })
+    const engine = createFixtureEngine({ state: initial })
 
     const snap = engine.tick()
 
@@ -48,7 +47,7 @@ describe('T-008 stage 2 — sectors + GDP', () => {
 
   it('country.gdp after tick = sum of sector outputs (no drift larger than the sum of sector drifts)', () => {
     const initial = createAureliaState()
-    const engine = createEngine(initial, { seed: 1 })
+    const engine = createFixtureEngine({ state: initial })
 
     const snap = engine.tick()
 
@@ -73,7 +72,7 @@ describe('T-008 stage 2 — sectors + GDP', () => {
     // holds every tick. With noise half-band 0.005 the clamp never fires
     // here — its presence is for T-009's tax-dampening path. We assert the
     // negative-GDP invariant; the warn assertion targets the clamp itself.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     for (let i = 0; i < 100; i++) {
       const snap = engine.tick()
       expect(snap.country.gdp).toBeGreaterThanOrEqual(0)
@@ -93,7 +92,7 @@ describe('T-008 stage 2 — sectors + GDP', () => {
 
   it('Phase 1: pollution_coefficient is tracked but never consumed (no system reads it)', () => {
     const initial = createAureliaState()
-    const engine = createEngine(initial, { seed: 1 })
+    const engine = createFixtureEngine({ state: initial })
 
     // Multi-tick: the engine never writes to pollution_coefficient.
     // (We use this as the strongest observable proxy for "no system reads it"
@@ -112,8 +111,8 @@ describe('T-008 stage 2 — sectors + GDP', () => {
   // --- Edge cases from the brief --------------------------------------------
 
   it('Two engines with the same seed produce identical sector outputs after N ticks (determinism contract)', () => {
-    const engineA = createEngine(createAureliaState(), { seed: 1 })
-    const engineB = createEngine(createAureliaState(), { seed: 1 })
+    const engineA = createFixtureEngine()
+    const engineB = createFixtureEngine()
 
     for (let i = 0; i < 25; i++) {
       const a = engineA.tick()
@@ -126,8 +125,8 @@ describe('T-008 stage 2 — sectors + GDP', () => {
   })
 
   it('Two engines with different seeds produce different sector outputs (noise actually fires)', () => {
-    const engineA = createEngine(createAureliaState(), { seed: 1 })
-    const engineB = createEngine(createAureliaState(), { seed: 2 })
+    const engineA = createFixtureEngine()
+    const engineB = createFixtureEngine({ seed: 2 })
 
     // After a single tick the trajectories must already differ on every sector.
     const a = engineA.tick()
@@ -141,7 +140,7 @@ describe('T-008 stage 2 — sectors + GDP', () => {
 
   it('Sector employment_share is unchanged after a tick (P1 invariant)', () => {
     const initial = createAureliaState()
-    const engine = createEngine(initial, { seed: 1 })
+    const engine = createFixtureEngine({ state: initial })
 
     const snap = engine.tick()
     for (let j = 0; j < initial.country.sectors.length; j++) {
@@ -160,7 +159,7 @@ describe('T-008 stage 2 — sectors + GDP', () => {
     // Per-tick output_next/output_prev ∈ [1 - 0.005, 1 + 0.005].
     const HALF_BAND = 0.005
 
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     let prev = createAureliaState().country.sectors.map((s) => s.output)
 
     let positiveTicks = 0
@@ -195,7 +194,7 @@ describe('T-008 stage 2 — sectors + GDP', () => {
     // the pipeline starts consuming `rng.next()` / `rng.nextRange(...)`, or
     // if sector iteration order changes, these numbers will shift and this
     // test will fail loudly. Update only if the reordering is intentional.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const snap = engine.tick()
 
     expect(snap.country.sectors[0].sector_type).toBe('agriculture')
@@ -250,7 +249,7 @@ describe('T-009 — Stage 2: tax income + dampening curve', () => {
             tax_corporate: tc,
             tax_consumption: tcons,
           })
-          const engine = createEngine(initial, { seed: 1 })
+          const engine = createFixtureEngine({ state: initial })
           const snap = engine.tick()
           expect(Number.isFinite(snap.flows.tax_income)).toBe(true)
           expect(snap.flows.tax_income).toBeGreaterThanOrEqual(0)
@@ -263,7 +262,7 @@ describe('T-009 — Stage 2: tax income + dampening curve', () => {
     // effective_rate = 0.6*25 + 0.25*30 + 0.15*15 = 24.75 → 0.2475
     // Expected nominal flow at GDP=400_000 is 0.2475 × 400_000 = 99_000.
     // T-008's sector noise drifts GDP by < 1%, so the flow is within ±1%.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const snap = engine.tick()
     const expected = 0.2475 * 400_000
     const driftPct = Math.abs(snap.flows.tax_income - expected) / expected
@@ -283,7 +282,7 @@ describe('T-009 — Stage 2: tax income + dampening curve', () => {
     // breakpoint (Aurelia default), sector outputs after one tick equal the
     // T-008 lock values byte-for-byte. (If dampening fired here, those exact
     // values would shift.)
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const snap = engine.tick()
     expect(snap.country.sectors[0].output).toBeCloseTo(48060.99549148231, 6)
     expect(snap.country.sectors[1].output).toBeCloseTo(119403.28286541626, 6)
@@ -335,7 +334,7 @@ describe('T-009 — Stage 2: tax income + dampening curve', () => {
     // Per [[Sample Tick]] § Scenario 2. Effective rate after raising the
     // income slider 25 → 30: 0.6*30 + 0.25*30 + 0.15*15 = 27.75 → 0.2775.
     // Expected nominal flow at GDP=400_000: 0.2775 × 400_000 = 111_000.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const d: Decision = { type: 'slider', slider_id: 'tax_income', value: 30 }
     engine.applyDecisions([d])
     const snap = engine.tick()
@@ -354,7 +353,7 @@ describe('T-009 — Stage 2: tax income + dampening curve', () => {
     // started consuming the RNG, (b) the incidence weights or formula moved,
     // or (c) the dampening curve changed how it composes with the GDP rollup.
     // Update only if the change is intentional.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const snap = engine.tick()
     expect(snap.flows.tax_income).toBeCloseTo(98883.1689836774, 6)
   })
@@ -371,7 +370,7 @@ describe('T-010 — Stage 2: budget spend + treasury balance', () => {
     // within ±1% of 98_883.17 (≈ ±988.83 absolute on each side, so |balance|
     // is permitted to land in [0, 988.83] for "approximately zero" or, more
     // generously here, within ±1% of the tax flow.)
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const snap = engine.tick()
 
     const tolerance = 0.01 * snap.flows.tax_income // 1% of tax_income
@@ -390,7 +389,7 @@ describe('T-010 — Stage 2: budget spend + treasury balance', () => {
     const treasuryPrev = state.country.treasury
     state.country.target_budget = 150_000
 
-    const engine = createEngine(state, { seed: 1 })
+    const engine = createFixtureEngine({ state })
     const snap = engine.tick()
 
     // Delta exactly equals the balance (no rounding, no clamping).
@@ -412,7 +411,7 @@ describe('T-010 — Stage 2: budget spend + treasury balance', () => {
     state.country.treasury = -10_000
     state.country.target_budget = 200_000
 
-    const engine = createEngine(state, { seed: 1 })
+    const engine = createFixtureEngine({ state })
 
     let prev = -10_000
     for (let i = 0; i < 3; i++) {
@@ -464,7 +463,7 @@ describe('T-010 — Stage 2: budget spend + treasury balance', () => {
     }
     state.country.target_budget = 100_000
 
-    const engine = createEngine(state, { seed: 1 })
+    const engine = createFixtureEngine({ state })
     const snap = engine.tick()
 
     const expectedSpend =
@@ -486,7 +485,7 @@ describe('T-010 — Stage 2: budget spend + treasury balance', () => {
     }
     state.country.target_budget = 100_000
 
-    const engine = createEngine(state, { seed: 1 })
+    const engine = createFixtureEngine({ state })
     const snap = engine.tick()
 
     // After normalization every share becomes 0.2 → spend = 1.0 × 100k.
@@ -512,7 +511,7 @@ describe('T-010 — Stage 2: budget spend + treasury balance', () => {
     }
     state.country.target_budget = 100_000
 
-    const engine = createEngine(state, { seed: 1 })
+    const engine = createFixtureEngine({ state })
     const snap = engine.tick()
 
     expect(snap.flows.budget_spend).toBe(0)
@@ -537,7 +536,7 @@ describe('T-010 — Stage 2: budget spend + treasury balance', () => {
     // would also break T-008 / T-009 locks), (b) the budget formula
     // changed, or (c) Aurelia's target_budget moved off 100_000. Update
     // only if the change is intentional.
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     const snap = engine.tick()
 
     expect(snap.flows.budget_spend).toBe(100_000)
@@ -547,19 +546,8 @@ describe('T-010 — Stage 2: budget spend + treasury balance', () => {
 })
 
 describe('T-015 stage 5 — treasury threshold events', () => {
-  // Stage 5 (T-015) consumes the PRNG zero times. The methods just need to be
-  // callable for the direct-stage-invocation tests below.
-  function makeDummyRng(): Rng {
-    let s = 0
-    return {
-      next: () => 0,
-      nextRange: () => 0,
-      getState: () => s,
-      setState: (next: number) => {
-        s = next
-      },
-    }
-  }
+  // Stage 5 consumes the PRNG zero times — makeDummyRng() from @test-utils
+  // satisfies the EngineContext shape without ever being invoked.
 
   it('When treasury crosses below 0, TreasuryThresholdCrossed is emitted exactly once', () => {
     // Drive a crossing through the full engine.tick() path: start treasury at
@@ -571,7 +559,7 @@ describe('T-015 stage 5 — treasury threshold events', () => {
     state.country.treasury = 10_000
     state.treasury_prev = 10_000
     state.country.target_budget = 200_000
-    const engine = createEngine(state, { seed: 1 })
+    const engine = createFixtureEngine({ state })
 
     const events: EngineEvent[] = []
     engine.subscribe((e) => events.push(e))
@@ -658,7 +646,7 @@ describe('T-015 stage 5 — treasury threshold events', () => {
     // mirrors it onto treasury_prev. No TreasuryThresholdCrossed fires
     // (treasury stays well above 0).
     const events: EngineEvent[] = []
-    const engine = createEngine(createAureliaState(), { seed: 1 })
+    const engine = createFixtureEngine()
     engine.subscribe((e) => events.push(e))
     const snap = engine.tick()
 

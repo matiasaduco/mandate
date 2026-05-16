@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createEngine } from '../../src/engine'
-import { createAureliaState } from '../../src/engine/fixtures/aurelia'
+import { createEngine } from '@engine'
+import { createAureliaState } from '@engine/fixtures/aurelia'
 
 describe('engine contract (T-002)', () => {
   it('tick() advances the tick counter by exactly 1', () => {
