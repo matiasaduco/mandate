@@ -47,23 +47,46 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
     // No events emitted by the remaining no-op stages (1, 3, 4, 5, 6, 7).
     expect(events).toEqual([])
 
-    // Everything other than `tick`, sectors, gdp, treasury, pops, and `flows`
-    // is unchanged. (treasury is written by T-010's budget block; flows holds
-    // tax_income / budget_spend / balance; pops are written by T-011's
-    // income/employment block.)
+    // Everything other than `tick`, sectors, gdp, treasury, pops, approval,
+    // approval_by_pop, and `flows` is unchanged. (treasury is written by
+    // T-010's budget block; flows holds tax_income / budget_spend / balance;
+    // pops are written by T-011's income/employment block; approval +
+    // approval_by_pop are written by T-013's stage 4; approval_prev +
+    // approval_threshold_last_fired_tick are the EngineState-side debounce
+    // bookkeeping for stage 4.)
     expect(after!.tick).toBe(10)
-    const { tick: _t1, country: beforeCountry, flows: _bf, ...beforeRest } = before
-    const { tick: _t2, country: afterCountry, flows: _af, ...afterRest } = after!
+    const {
+      tick: _t1,
+      country: beforeCountry,
+      flows: _bf,
+      approval_prev: _bap,
+      approval_threshold_last_fired_tick: _bat,
+      ...beforeRest
+    } = before
+    const {
+      tick: _t2,
+      country: afterCountry,
+      flows: _af,
+      approval_prev: _aap,
+      approval_threshold_last_fired_tick: _aat,
+      ...afterRest
+    } = after!
     void _t1
     void _t2
     void _bf
     void _af
+    void _bap
+    void _bat
+    void _aap
+    void _aat
     expect(afterRest).toEqual(beforeRest)
     const {
       sectors: _bs,
       gdp: _bg,
       treasury: _bt,
       pops: _bp,
+      approval: _ba,
+      approval_by_pop: _babp,
       ...beforeCountryRest
     } = beforeCountry
     const {
@@ -71,16 +94,22 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
       gdp: _ag,
       treasury: _at,
       pops: _ap,
+      approval: _aa,
+      approval_by_pop: _aabp,
       ...afterCountryRest
     } = afterCountry
     void _bs
     void _bg
     void _bt
     void _bp
+    void _ba
+    void _babp
     void _as
     void _ag
     void _at
     void _ap
+    void _aa
+    void _aabp
     expect(afterCountryRest).toEqual(beforeCountryRest)
   })
 
