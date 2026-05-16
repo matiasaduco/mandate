@@ -3,13 +3,19 @@
 // T-013 owns: size-weighted approval rollup over POPs, exponential smoothing
 // using `state.approval_prev` as the previous-tick value, clamp to
 // [APPROVAL_FLOOR, APPROVAL_CEILING], and ApprovalThresholdCrossed event
-// emission with sub-TAU debounce. T-014 layers stability follow-on.
+// emission with sub-TAU debounce.
+// T-014 adds part 2 (at the end of the same stage): derive
+// `country.stability` from the freshly-written `approvalNext` (intra-stage
+// same-tick read of the LOCAL variable, NOT state.country.approval) and
+// `country.treasury / STARTING_TREASURY_P1` as a treasury_health proxy.
 //
 // Determinism contract:
 //   - This stage consumes the PRNG **zero** times. Approval is a pure function
 //     of POP `size` and `happiness` (written by stage 3 earlier this tick) and
-//     of the previous tick's `approval_prev`. Adding rng draws here would
-//     shift the T-008/T-009/T-010/T-011/T-012 determinism locks.
+//     of the previous tick's `approval_prev`. Stability is a pure function of
+//     `approvalNext` (intra-stage local) and `country.treasury` (written by
+//     stage 2 earlier this tick). Adding rng draws here would shift the
+//     T-008/T-009/T-010/T-011/T-012/T-013 determinism locks.
 //
 // Same-tick read contract (invariant #4):
 //   - Reads `pop.size` and `pop.happiness` after stage 3 (T-012) has just
@@ -58,6 +64,22 @@ import {
   APPROVAL_INERTIA_TAU,
   APPROVAL_WARN_THRESHOLDS,
 } from '../tunables'
+
+// T-014 free parameters — not vault Tunables yet.
+// TODO(T-031): promote to Tunables and re-balance.
+// Calibrator note: (0.8, 20) lands closer to the AC centre 65 (stability 64.34
+// vs 68.52). (0.7, 30) is recommended for T-014 because:
+//   - W_a × approval_max + W_t × treasury_health_max = 0.7×100 + 30×1 = 100
+//     exactly. The output dynamic range fully fills [0, 100] with no headroom
+//     waste.
+//   - AC #1 passes (predicted 68.52 ∈ [60, 70]).
+const STABILITY_APPROVAL_WEIGHT_P1 = 0.7
+const STABILITY_TREASURY_WEIGHT_P1 = 30
+
+// TODO(Phase 3): when multi-country lands, derive per-country from a snapshot
+// or add Country.treasury_baseline field. P1 hardcodes Aurelia's starting
+// value.
+const STARTING_TREASURY_P1 = 50_000
 
 function clampApproval(x: number): number {
   if (x < APPROVAL_FLOOR) return APPROVAL_FLOOR
@@ -116,14 +138,45 @@ export function stage4_politics(state: EngineState, ctx: EngineContext): EngineS
     updatedFiredMap[threshold] = state.tick
   }
 
-  // 5) Write through. Update `approval_prev` AFTER the threshold check has
-  // consumed the previous value.
+  // 5) Stability derivation (T-014). Reads the LOCAL `approvalNext` (the new
+  // clamped post-smoothing approval just computed above), NOT
+  // `state.country.approval` — this keeps the same-tick intra-stage read
+  // explicit and immune to any future intermediate mutation.
+  //
+  // treasury_health is the fraction of starting treasury currently held,
+  // clamped to [0, 1] so a windfall doesn't make stability blow up.
+  const treasuryHealth = Math.min(
+    1,
+    Math.max(0, country.treasury / STARTING_TREASURY_P1),
+  )
+
+  const stabilityRaw =
+    approvalNext * STABILITY_APPROVAL_WEIGHT_P1 +
+    treasuryHealth * STABILITY_TREASURY_WEIGHT_P1
+
+  // Clamp to [0, 100]. Under P1 with weights (0.7, 30) and the in-formula
+  // treasury_health clamp + T-013's approval clamp, stabilityRaw ∈ [0, 100]
+  // already — the clamp is defensive-only and is dead code under realistic P1
+  // inputs. Emit a console.warn if it ever fires so a future invariant break
+  // (e.g. weights re-tuned past 100, or upstream clamps broken) is visible.
+  let stability = stabilityRaw
+  if (stabilityRaw < 0) {
+    console.warn('[stability clamp] stabilityRaw < 0:', stabilityRaw)
+    stability = 0
+  } else if (stabilityRaw > 100) {
+    console.warn('[stability clamp] stabilityRaw > 100:', stabilityRaw)
+    stability = 100
+  }
+
+  // 6) Write through. Update `approval_prev` AFTER the threshold check has
+  // consumed the previous value. Stability flows into the returned country.
   return {
     ...state,
     country: {
       ...country,
       approval: approvalNext,
       approval_by_pop: approvalByPop,
+      stability,
     },
     approval_prev: approvalNext,
     approval_threshold_last_fired_tick:
