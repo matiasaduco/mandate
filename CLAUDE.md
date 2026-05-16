@@ -113,20 +113,24 @@ pnpm format       # prettier --write .
 
 ## Custom subagents
 
-The repo ships three project-specific subagents under `.claude/agents/`:
+The repo ships five project-specific subagents under `.claude/agents/`:
 
 - **`vault-context`** *(read-only)* — given a ticket id (`T-NNN`) or system name, reads the Obsidian vault in the documented order and returns a structured implementation brief (Goal, Scope, System Contract, Acceptance Criteria, Edge Cases, Tunables, Fixture refs, Decisions to honor). Run this **before** any implementation work; review the brief; then hand it to a dev agent.
+- **`engine-calibrator`** *(read-only)* — given a `vault-context` brief, back-solves any free numeric parameters from the Aurelia fixture, tests candidate values against the AC tolerances, and returns recommended defaults + determinism-lock predictions. Use when the ticket has coefficients / dynamic ranges / scaling factors that the vault leaves undefined (T-011, T-012, T-013, T-014 all needed this). Skip for pure-plumbing tickets (T-006, T-017).
 - **`engine-dev`** — implements engine tickets (T-006…T-018, T-028…T-031). Knows the headless / deterministic / no-literals rules. Writes Vitest specs from AC. Runs `pnpm test`/`lint`/`build`.
 - **`ui-dev`** — implements UI tickets (T-019…T-027). Knows the React 19 + Zustand + Recharts conventions and the engine ↔ UI contract. Writes RTL component tests. Runs `pnpm test`/`lint`/`build` and a visual sanity pass via `pnpm dev` when feasible.
+- **`vault-syncer`** — after one or more tickets are merged to `main`, syncs the vault: ticks AC checkboxes on the relevant system pages with the test path that proves each, updates the **Status** line on each ticket entry, and bumps the **Progress** counter at the top of `Phase 1 Tickets.md`. Can take an explicit ticket list or a git range. Invoke periodically (e.g., after every merge, or in batch every N merges) — do NOT invoke during implementation.
 
-The dev agents do **not** have the `Agent` tool — they cannot recursively call `vault-context`. The orchestrator (the main Claude Code session, or you when running by hand) is responsible for chaining: brief first, review, then implement.
+The dev agents do **not** have the `Agent` tool — they cannot recursively call `vault-context` or `engine-calibrator`. The orchestrator (the main Claude Code session, or you when running by hand) is responsible for chaining: brief first, calibrate if needed, review, then implement.
 
 ## How to work on a ticket
 
 1. Run `vault-context T-NNN` — review the returned brief.
-2. Hand the brief to `engine-dev` or `ui-dev` depending on the ticket area.
-3. Review the dev agent's report (branch, AC checked, gate results).
-4. Spot-check the diff and tests; merge the PR; verify the vault has its AC boxes checked with test paths.
+2. If the brief flags numeric free parameters, run `engine-calibrator` with the brief — review the recommended defaults + AC verification.
+3. Hand brief + (optional) calibration to `engine-dev` or `ui-dev` depending on the ticket area.
+4. Review the dev agent's report (branch, AC checked, gate results).
+5. Spot-check the diff and tests; merge the PR.
+6. After merge: run `vault-syncer T-NNN` (or batch several merged tickets) to tick AC boxes and update the Progress counter.
 
 ## GitHub workflow
 
