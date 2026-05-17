@@ -29,9 +29,12 @@ describe('Aurelia fixture (T-005)', () => {
     expect(sum).toBe(400_000)
   })
 
-  it('target_budget is pinned to 100_000 (steady-state tax_income; T-010)', () => {
+  it('target_budget is pinned to 99_000 (steady-state tax_income at noise-mean; T-010 / T-030)', () => {
+    // T-030 — Aligned with the engine's actual steady-state tax_income at
+    // noise-mean (GDP=400_000 × effective_rate=0.2475 = 99_000) so the
+    // per-tick balance lands at ≈ 0, matching [[Sample Tick]] § Scenario 1.
     const s = createAureliaState()
-    expect(s.country.target_budget).toBe(100_000)
+    expect(s.country.target_budget).toBe(99_000)
   })
 
   it('the 5 budget shares sum to 1.0 (within float tolerance)', () => {
