@@ -23,6 +23,14 @@ describe('tunables match the vault (T-003)', () => {
     expect(Tunables.TAX_CORPORATE_RANGE).toEqual([0, 60])
     expect(Tunables.TAX_CONSUMPTION_RANGE).toEqual([0, 30])
     expect(Tunables.TAX_DAMPENING_BREAKPOINT).toBe(40)
+    expect(Tunables.TAX_DAMPENING_K_P1).toBe(0.5)
+    expect(Tunables.TAX_INCIDENCE_WEIGHTS_P1).toEqual({
+      income: 0.6,
+      corporate: 0.25,
+      consumption: 0.15,
+    })
+    expect(Tunables.SECTOR_BASE_GROWTH).toBe(1.0)
+    expect(Tunables.SECTOR_GROWTH_NOISE_HALF_BAND).toBe(0.005)
     expect(Tunables.BUDGET_CATEGORIES_P1).toEqual([
       'health',
       'education',
@@ -30,6 +38,17 @@ describe('tunables match the vault (T-003)', () => {
       'security',
       'welfare',
     ])
+  })
+
+  it('decrees (T-031)', () => {
+    expect(Tunables.PUBLIC_ADDRESS_HAPPINESS_DELTA_P1).toBe(5)
+    expect(Tunables.PUBLIC_ADDRESS_DURATION_P1).toBe(1)
+    expect(Tunables.EMERGENCY_RELIEF_HAPPINESS_DELTA_P1).toBe(10)
+    expect(Tunables.EMERGENCY_RELIEF_DURATION_P1).toBe(3)
+    expect(Tunables.EMERGENCY_RELIEF_COST_P1).toBe(3_000)
+    expect(Tunables.INDUSTRIAL_SUBSIDY_PCT_P1).toBe(0.1)
+    expect(Tunables.INDUSTRIAL_SUBSIDY_DURATION_P1).toBe(5)
+    expect(Tunables.INDUSTRIAL_SUBSIDY_COST_P1).toBe(5_000)
   })
 
   it('approval', () => {
@@ -49,6 +68,7 @@ describe('tunables match the vault (T-003)', () => {
     expect(Tunables.HAPPINESS_RANGE).toEqual([0, 100])
     expect(Tunables.HAPPINESS_INERTIA_TAU).toBe(3)
     expect(Tunables.RADICALIZATION_PASSIVE_DECAY).toBe(0.5)
+    expect(Tunables.INCOME_CLAMPED_HAPPINESS_PENALTY_P1).toBe(40)
   })
 
   it('pollution and ui', () => {

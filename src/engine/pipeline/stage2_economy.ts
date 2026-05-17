@@ -86,35 +86,19 @@ import type { EngineState } from '../types'
 import type { Sector } from '../entities/Sector'
 import type { BudgetShares } from '../entities/Country'
 import type { EngineContext } from './context'
-import { BUDGET_CATEGORIES_P1, TAX_DAMPENING_BREAKPOINT } from '../tunables'
+import {
+  BUDGET_CATEGORIES_P1,
+  SECTOR_BASE_GROWTH,
+  SECTOR_GROWTH_NOISE_HALF_BAND,
+  TAX_DAMPENING_BREAKPOINT,
+  TAX_DAMPENING_K_P1,
+  TAX_INCIDENCE_WEIGHTS_P1,
+} from '../tunables'
 
 // Implementation detail (not a Tunable): floats from slider arithmetic can
 // land a few ulps off 1.0; this tolerance avoids spurious normalization
 // warnings on legitimately well-formed share sets.
 const SHARE_NORMALIZE_TOLERANCE = 0.001
-
-// TODO T-031: promote to tunables.ts after balancing pass.
-const SECTOR_GROWTH_NOISE_HALF_BAND = 0.005
-const SECTOR_BASE_GROWTH = 1.0
-
-// T-031: promote to Tunables when balanced.
-// Phase 1 incidence weights for the 3 tax sliders, used to fold them into a
-// single GDP-incidence-weighted effective rate. The choice (income > corporate
-// > consumption) is a placeholder calibrated to make Aurelia's effective rate
-// land near the documented ~25% in the Sample Tick. Sum is 1.0 by design.
-const TAX_INCIDENCE_WEIGHTS_P1 = {
-  income: 0.6,
-  corporate: 0.25,
-  consumption: 0.15,
-} as const
-
-// T-031: tune this; promote to Tunables.
-// Convex quadratic decay coefficient for the dampening curve above the
-// breakpoint. Verified strictly positive and monotonic for rates ≤ 0.60:
-//   excess = 0.20  → decay = 1 - 0.5 * 0.04 = 0.98
-//   excess = 0.10  → decay = 1 - 0.5 * 0.01 = 0.995
-// Defensive clamp to [0, 1] in `taxDampening` handles any future widening.
-const TAX_DAMPENING_K_P1 = 0.5
 
 /**
  * Convex monotonic decay applied to sector outputs when the effective tax

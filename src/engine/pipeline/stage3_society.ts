@@ -85,6 +85,7 @@ import type { EngineContext } from './context'
 import {
   HAPPINESS_INERTIA_TAU,
   HAPPINESS_RANGE,
+  INCOME_CLAMPED_HAPPINESS_PENALTY_P1,
   RADICALIZATION_PASSIVE_DECAY,
   TAX_CONSUMPTION_RANGE,
   TAX_CORPORATE_RANGE,
@@ -143,11 +144,10 @@ const POP_HAPPINESS_BASELINE_P1: Record<PopType, number> = {
 // raw ∈ [baseline - 25, baseline + 25] before any income-clamp penalty.
 const POP_HAPPINESS_DYNAMIC_RANGE_P1 = 50
 
-// TODO(T-031): promote to Tunables.
+// INCOME_CLAMPED_HAPPINESS_PENALTY_P1: promoted to ../tunables.ts in T-031.
 // Subtracted from raw_happiness when pop.income_clamped is true. Severe per
 // the POP Types edge case ("flag as severe in happiness driver") — applied
 // BEFORE the [HAPPINESS_RANGE] clamp so the smoothing target reflects it.
-const INCOME_CLAMPED_HAPPINESS_PENALTY_P1 = 20
 
 // TODO(T-031): promote to Tunables (or to Sector entity if vault adds an
 // `output_baseline` field). P1 substitute for the missing
