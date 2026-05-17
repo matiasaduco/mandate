@@ -355,6 +355,82 @@
   box-shadow: 0 0 0 2px var(--accent-bg);
 }
 
+/* T-027: preview slot spans the entire slider row underneath the track.
+ * The Slider's grid is 4 columns (label / track / value / dot); column-span
+ * keeps the preview aligned with the track without affecting row layout when
+ * absent. */
+.slider__preview-slot {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+}
+
+/* --- SliderPreview (T-027) ------------------------------------------ */
+
+.slider-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 10px;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--text-h);
+}
+
+.slider-preview__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.slider-preview__label {
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-size: 10px;
+}
+
+.slider-preview__value {
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.slider-preview__value--positive {
+  color: var(--accent);
+}
+
+.slider-preview__value--negative {
+  color: var(--danger);
+}
+
+.slider-preview__value--neutral {
+  color: var(--text);
+  opacity: 0.7;
+}
+
+.slider-preview__pops {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-top: 1px dashed var(--accent-border);
+  padding-top: 4px;
+}
+
+.slider-preview__pop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.slider-preview__pop-name {
+  text-transform: capitalize;
+  color: var(--text);
+}
+
 /* --- GdpChart (T-023) ----------------------------------------------- */
 
 .gdp-chart {

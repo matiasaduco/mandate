@@ -25,7 +25,7 @@
 //   - `flows.balance` paints red when negative (matches OverviewPanel's
 //     negative-treasury treatment).
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 
 import type { EngineEvent, SliderId } from '@engine/types'
 import {
@@ -37,7 +37,9 @@ import {
 import { formatNumber, formatTitle } from '@ui/components/format'
 import { GdpChart } from '@ui/components/GdpChart'
 import { SectorBreakdown } from '@ui/components/SectorBreakdown'
-import { Slider } from '@ui/components/Slider'
+import { Slider, type SliderProps } from '@ui/components/Slider'
+import { SliderPreview } from '@ui/components/SliderPreview'
+import { useSliderPreview } from '@ui/hooks/useSliderPreview'
 import {
   getGameStore,
   type GameStore,
@@ -90,6 +92,75 @@ function computeRecentlyChanged(
     out[ev.slider_id] = currentTick - ev.tick <= RECENTLY_CHANGED_TICK_WINDOW
   }
   return out
+}
+
+/**
+ * T-027 — Per-slider wrapper that owns its own candidate state and renders
+ * the `<SliderPreview>` into the `preview` slot on `<Slider>`. Kept private
+ * to this module: the EconomyPanel uses it 8 times (3 tax + 5 budget); no
+ * other panel has writable sliders yet so there's no use-case for sharing.
+ *
+ * Why a wrapper rather than calling `useSliderPreview` 8x in EconomyPanel:
+ *   - Each invocation needs an isolated candidate state — colocating in a
+ *     child keeps the per-slider state lifecycle tight.
+ *   - React's rules-of-hooks forbid calling hooks inside loops; the budget
+ *     sliders are mapped over `BUDGET_CATEGORIES`, so the wrapper is the
+ *     idiomatic way to hoist `useSliderPreview` out of that loop.
+ *
+ * On commit, the wrapper clears its candidate so the preview disappears once
+ * the player releases — by the next tick the snapshot reflects the new value
+ * and there is nothing more to preview from the current position.
+ */
+type PreviewedSliderProps = {
+  store: GameStore
+  sliderId: SliderId
+  /**
+   * Maps the slider's RAW thumb value (what the input emits) to the engine's
+   * decision-value space. Tax sliders pass identity; budget sliders divide
+   * by 100 (percent → share). Mirrors the parent's `commitSlider` math so
+   * the preview and the commit speak the same currency.
+   */
+  toDecisionValue: (raw: number) => number
+  /**
+   * Forward-only commit handler — exactly the same function the Slider would
+   * have called without the preview wiring. The wrapper invokes it after
+   * clearing its local candidate so the preview disappears immediately on
+   * release.
+   */
+  onCommit: (raw: number) => void
+} & Pick<
+  SliderProps,
+  'id' | 'label' | 'min' | 'max' | 'value' | 'formatDisplay' | 'recentlyChanged'
+>
+
+function PreviewedSlider({
+  store,
+  sliderId,
+  toDecisionValue,
+  onCommit,
+  ...sliderProps
+}: PreviewedSliderProps) {
+  // Per-slider local candidate. `null` means "no drag in progress" → no
+  // preview rendered. Cleared on commit so the preview vanishes on release.
+  const [candidate, setCandidate] = useState<number | null>(null)
+  // Translate the raw thumb value into engine-decision space BEFORE calling
+  // the hook so the cache key uses the same units the engine will see on
+  // commit. Otherwise a budget slider would cache by percent (e.g. 22) but
+  // commit a share (0.22) and the preview would mismatch.
+  const candidateForEngine = candidate === null ? null : toDecisionValue(candidate)
+  const result = useSliderPreview(sliderId, candidateForEngine, store)
+
+  return (
+    <Slider
+      {...sliderProps}
+      onCommit={(v) => {
+        setCandidate(null)
+        onCommit(v)
+      }}
+      onCandidateChange={(v) => setCandidate(v)}
+      preview={<SliderPreview result={result} sliderId={sliderId} />}
+    />
+  )
 }
 
 export function EconomyPanel({ store }: EconomyPanelProps) {
@@ -145,33 +216,42 @@ export function EconomyPanel({ store }: EconomyPanelProps) {
           </span>
         </div>
         <div className="economy-panel__sliders">
-          <Slider
+          <PreviewedSlider
+            store={resolved}
+            sliderId="tax_income"
             id="tax_income"
             label="Income tax"
             min={TAX_INCOME_RANGE[0]}
             max={TAX_INCOME_RANGE[1]}
             value={sliders.tax_income}
             onCommit={(v) => commitSlider('tax_income', v)}
+            toDecisionValue={(v) => v}
             formatDisplay={(v) => `${v}%`}
             recentlyChanged={recentlyChanged.tax_income ?? false}
           />
-          <Slider
+          <PreviewedSlider
+            store={resolved}
+            sliderId="tax_corporate"
             id="tax_corporate"
             label="Corporate tax"
             min={TAX_CORPORATE_RANGE[0]}
             max={TAX_CORPORATE_RANGE[1]}
             value={sliders.tax_corporate}
             onCommit={(v) => commitSlider('tax_corporate', v)}
+            toDecisionValue={(v) => v}
             formatDisplay={(v) => `${v}%`}
             recentlyChanged={recentlyChanged.tax_corporate ?? false}
           />
-          <Slider
+          <PreviewedSlider
+            store={resolved}
+            sliderId="tax_consumption"
             id="tax_consumption"
             label="Consumption tax"
             min={TAX_CONSUMPTION_RANGE[0]}
             max={TAX_CONSUMPTION_RANGE[1]}
             value={sliders.tax_consumption}
             onCommit={(v) => commitSlider('tax_consumption', v)}
+            toDecisionValue={(v) => v}
             formatDisplay={(v) => `${v}%`}
             recentlyChanged={recentlyChanged.tax_consumption ?? false}
           />
@@ -200,8 +280,10 @@ export function EconomyPanel({ store }: EconomyPanelProps) {
           {BUDGET_CATEGORIES.map((cat, idx) => {
             const sliderId: SliderId = `budget_${cat}`
             return (
-              <Slider
+              <PreviewedSlider
                 key={cat}
+                store={resolved}
+                sliderId={sliderId}
                 id={sliderId}
                 label={formatTitle(cat)}
                 min={0}
@@ -212,6 +294,10 @@ export function EconomyPanel({ store }: EconomyPanelProps) {
                 // belt-and-braces guard.
                 value={Math.round(budgetPercents[idx])}
                 onCommit={(v) => commitSlider(sliderId, v / 100)}
+                // Budget sliders display percent (0–100) but the engine
+                // consumes a share (0–1). Mirror the commit-path divide for
+                // the preview so cache keys + decisions stay in sync.
+                toDecisionValue={(v) => v / 100}
                 formatDisplay={(v) => `${v}%`}
                 recentlyChanged={recentlyChanged[sliderId] ?? false}
               />
