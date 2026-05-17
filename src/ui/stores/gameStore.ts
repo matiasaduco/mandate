@@ -92,6 +92,17 @@ function pushTrendSample(prev: Trends, snapshot: EngineState): Trends {
 export type GameStoreState = {
   /** Latest engine snapshot. Read-only from the UI's perspective. */
   snapshot: EngineState
+  /**
+   * T-025 — The engine snapshot from the tick BEFORE `snapshot`. Used by the
+   * PoliticsPanel to compute per-POP happiness deltas for the "Why?" tooltip
+   * (see `politicsWhy.ts`). `null` on first paint (no prior tick) and on the
+   * very first `advance()` it is set to the initial seeded state. Each
+   * subsequent `advance()` rotates: the current `snapshot` becomes the new
+   * `prevSnapshot`, and the freshly ticked state becomes the new `snapshot`.
+   * Carried on the store rather than derived because the engine itself does
+   * not retain history beyond `approval_prev` / `treasury_prev`.
+   */
+  prevSnapshot: EngineState | null
   /** Recent engine events, FIFO, capped at EVENT_FEED_LENGTH. */
   events: EngineEvent[]
   /**
@@ -180,6 +191,9 @@ export function createGameStore(options: GameStoreOptions): GameStore {
 
   const store = create<GameStoreState>((set) => ({
     snapshot: seedState,
+    // T-025: no prior tick on first paint. After the first `advance()` this
+    // becomes the initial seed state; rotated each subsequent advance.
+    prevSnapshot: null,
     events: [],
     speed: initialSpeed,
     // T-022: seed the trend buffers with one sample of the starting state so
@@ -190,7 +204,13 @@ export function createGameStore(options: GameStoreOptions): GameStore {
 
     advance: () => {
       const nextSnapshot = engine.tick()
+      // Functional setter: rotate prev → current → next in a single set call
+      // so React subscribers see a single coherent state transition. The
+      // previously-current `snapshot` becomes the new `prevSnapshot` BEFORE
+      // we overwrite it — this is the comparator the PoliticsPanel "Why?"
+      // tooltip uses to compute per-POP happiness deltas.
       set((prev) => ({
+        prevSnapshot: prev.snapshot,
         snapshot: nextSnapshot,
         trends: pushTrendSample(prev.trends, nextSnapshot),
       }))

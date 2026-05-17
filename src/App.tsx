@@ -13,6 +13,7 @@ import { TopBar } from '@ui/components/TopBar'
 import { useTickLoop } from '@ui/hooks/useTickLoop'
 import { EconomyPanel } from '@ui/panels/EconomyPanel'
 import { OverviewPanel } from '@ui/panels/OverviewPanel'
+import { PoliticsPanel } from '@ui/panels/PoliticsPanel'
 import { SocietyPanel } from '@ui/panels/SocietyPanel'
 import { getGameStore } from '@ui/stores/gameStore'
 
@@ -29,7 +30,8 @@ function App() {
         <OverviewPanel />
         <EconomyPanel />
         <SocietyPanel />
-        {/* Remaining panels arrive in T-025 (Politics) and T-026 (Event Feed). */}
+        <PoliticsPanel />
+        {/* Remaining panel arrives in T-026 (Event Feed). */}
       </main>
     </>
   )
