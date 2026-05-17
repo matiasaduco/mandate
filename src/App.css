@@ -404,3 +404,186 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* --- SocietyPanel (T-024) ------------------------------------------- */
+
+.society-panel {
+  padding: 16px 18px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.society-panel__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  color: var(--text-h);
+}
+
+.society-panel__table thead th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.society-panel__table tbody td,
+.society-panel__table tbody th {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.society-panel__table tbody tr:last-child td,
+.society-panel__table tbody tr:last-child th {
+  border-bottom: none;
+}
+
+.society-panel__pop-name {
+  font-weight: 600;
+  text-align: left;
+  text-transform: capitalize;
+}
+
+.society-panel__sort-btn {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-size: 11px;
+  padding: 2px 4px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.society-panel__sort-btn:hover {
+  color: var(--accent);
+}
+
+.society-panel__sort-btn.is-active {
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.society-panel__sort-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.society-panel__size-abs {
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.society-panel__size-pct {
+  font-size: 11px;
+  color: var(--text);
+}
+
+.society-panel__happiness {
+  min-width: 140px;
+}
+
+.society-panel__happiness-bar-track {
+  display: inline-block;
+  width: 100px;
+  height: 8px;
+  background: var(--accent-bg);
+  border-radius: 4px;
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.society-panel__happiness-bar {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s ease-out;
+}
+
+.society-panel__happiness-value {
+  margin-left: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-h);
+}
+
+.society-panel__priorities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.society-panel__employment {
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+/* --- PriorityChip (T-024) ------------------------------------------- */
+
+.priority-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  border-radius: 999px;
+  cursor: help;
+  white-space: nowrap;
+}
+
+/* --- IdeologyDot (T-024) -------------------------------------------- */
+
+.ideology {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ideology__label {
+  font-size: 10px;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.ideology__track {
+  position: relative;
+  width: 80px;
+  height: 6px;
+  background: var(--accent-bg);
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+.ideology__dot {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px var(--panel-bg);
+}
+
+/* Single-column fallback: at narrow widths the priorities/ideology columns
+ * become cramped; let the table scroll horizontally rather than wrap into an
+ * unreadable mess. */
+@media (max-width: 1023px) {
+  .society-panel {
+    overflow-x: auto;
+  }
+}
