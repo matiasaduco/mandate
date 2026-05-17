@@ -26,6 +26,7 @@
 import { SPEEDS } from '@engine/tunables'
 import { formatCalendar } from '@ui/components/calendar'
 import { formatNumber, formatPercent } from '@ui/components/format'
+import { SaveLoadControls } from '@ui/components/SaveLoadControls'
 import {
   getGameStore,
   type GameStore,
@@ -114,6 +115,10 @@ export function TopBar({ store }: TopBarProps) {
           )
         })}
       </div>
+
+      {/* T-028 — Save / Load controls. Pauses the engine before each action
+         so the mid-tick safety invariant is trivially satisfied. */}
+      <SaveLoadControls store={resolved} />
     </header>
   )
 }

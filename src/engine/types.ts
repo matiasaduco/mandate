@@ -8,6 +8,7 @@ import type { Decision, SliderId, DecreeId } from './entities/Decision'
 import type { ActiveDecree, DecreeEffect } from './entities/Decree'
 import type { PopType } from './entities/POP'
 import type { GameSpeed, GameOverReason, LossCounters } from './entities/GameControl'
+import type { Rng } from './rng'
 
 export type {
   Country,
@@ -140,4 +141,12 @@ export type Engine = {
   applyDecisions: (decisions: Decision[]) => void
   tick: () => EngineState
   subscribe: (listener: EngineEventListener) => () => void
+  /**
+   * The seeded PRNG owned by this engine. Exposed so the save/load factory
+   * (`createEngineFromSavedState`, T-028) can restore the PRNG position via
+   * `rng.setState(savedState.rng_state)` after construction. UI code MUST NOT
+   * draw from this directly — go through engine actions so determinism is
+   * preserved.
+   */
+  rng: Rng
 }
