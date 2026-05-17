@@ -22,7 +22,7 @@
 // visible. We also reset the committed baseline so the next divergence we
 // measure is against the new starting point.
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 
 export type SliderProps = {
   /** DOM id for the input — also the test hook. */
@@ -49,6 +49,22 @@ export type SliderProps = {
   recentlyChanged?: boolean
   /** Override for aria-label on the input. Defaults to `label`. */
   ariaLabel?: string
+  /**
+   * T-027 — Fires on every `onChange` (i.e. while dragging) with the current
+   * thumb value. Optional; used by the EconomyPanel to drive the "predicted
+   * impact" preview without entangling this Slider with the preview logic
+   * itself. The Slider remains commit-on-release for the engine queue (see
+   * `onCommit`) — `onCandidateChange` is purely a passive readout for the
+   * parent to render whatever side-UI it wants.
+   */
+  onCandidateChange?: (value: number) => void
+  /**
+   * T-027 — Optional content rendered below the slider row. The EconomyPanel
+   * passes a `<SliderPreview>` element here while the player is dragging; the
+   * Slider just decides where it goes layout-wise. Anything renderable is
+   * allowed — Slider does NOT inspect this content.
+   */
+  preview?: ReactNode
 }
 
 export function Slider({
@@ -62,6 +78,8 @@ export function Slider({
   formatDisplay,
   recentlyChanged = false,
   ariaLabel,
+  onCandidateChange,
+  preview,
 }: SliderProps) {
   // Local thumb position + last-committed baseline + last-seen prop value all
   // live in a single state object. This is the React 19 idiom for "reset
@@ -82,6 +100,12 @@ export function Slider({
 
   const setLocal = (next: number) => {
     setS((prev) => ({ ...prev, local: next }))
+    // T-027: surface the in-progress candidate to the parent so it can drive
+    // a preview without owning the input. Fires on every drag change — the
+    // parent decides whether to memoize / debounce. We keep the call outside
+    // the setState batch because React 19 batches both updates anyway and
+    // the parent's render is what consumes this value.
+    onCandidateChange?.(next)
   }
 
   const commitIfChanged = () => {
@@ -125,6 +149,15 @@ export function Slider({
       </span>
       {recentlyChanged ? (
         <span className="slider__recent-dot" data-testid={`slider-${id}-recent`} aria-hidden="true" />
+      ) : null}
+      {/* T-027: optional preview slot. Rendered as a sibling row inside the
+          label so it inherits the slider's `htmlFor` association for screen
+          readers, but lives in its own grid cell (spanning the full row via
+          CSS) so it doesn't compete with the label/track/value/dot columns. */}
+      {preview !== undefined ? (
+        <div className="slider__preview-slot" data-testid={`slider-${id}-preview-slot`}>
+          {preview}
+        </div>
       ) : null}
     </label>
   )
