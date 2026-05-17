@@ -587,3 +587,163 @@
     overflow-x: auto;
   }
 }
+
+/* --- PoliticsPanel (T-025) ------------------------------------------ */
+
+.politics-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.politics-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-width: 0;
+}
+
+.politics-panel__section h3 {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.politics-panel__headline {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.politics-panel__approval-value {
+  font-family: var(--mono);
+  font-size: 42px;
+  line-height: 1;
+  color: var(--text-h);
+}
+
+.politics-panel__trend-arrow {
+  font-size: 22px;
+  line-height: 1;
+  color: var(--text);
+}
+
+.politics-panel__trend-arrow--rising {
+  color: var(--accent);
+}
+
+.politics-panel__trend-arrow--falling {
+  color: var(--danger);
+}
+
+.politics-panel__why {
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: underline dotted;
+  cursor: help;
+  margin-left: auto;
+}
+
+.politics-panel__breakdown {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.politics-panel__breakdown-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 56px;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-h);
+}
+
+.politics-panel__breakdown-name {
+  text-transform: capitalize;
+}
+
+.politics-panel__breakdown-bar-track {
+  height: 8px;
+  background: var(--accent-bg);
+  border-radius: 4px;
+  overflow: hidden;
+  display: block;
+}
+
+.politics-panel__breakdown-bar {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.politics-panel__breakdown-value {
+  font-family: var(--mono);
+  text-align: right;
+}
+
+.politics-panel__decrees {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* --- DecreeButton (T-025) ------------------------------------------- */
+
+.decree-btn {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 8px 12px;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.decree-btn:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+}
+
+.decree-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.decree-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.decree-btn__label {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.decree-btn__cost {
+  font-family: var(--mono);
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+@media (max-width: 1023px) {
+  .politics-panel {
+    grid-template-columns: 1fr;
+  }
+}
