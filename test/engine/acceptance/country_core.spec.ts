@@ -37,9 +37,10 @@ import type { EngineContext } from '@engine/pipeline/context'
 
 describe('T-014 stage 4 part 2 — country stability derivation', () => {
   it('On Aurelia start, country.stability ≈ 65 within ±5', () => {
-    // Calibrator-computed prediction: 68.51961743958916 (within [60, 70]).
-    // Derivation: approval=55.985 × 0.7 + (48883.169/50000) × 30
-    //           = 39.190 + 29.330 = 68.520.
+    // T-030 — With balanced fixture (target_budget=99_000), treasury after
+    // 1 tick is 49_883.169 → treasury_health = 0.9977 (almost full).
+    // Derivation: approval=55.985 × 0.7 + (49883.169/50000) × 30
+    //           = 39.190 + 29.930 = 69.120 (within [60, 70]).
     const engine = createFixtureEngine()
     const snap = engine.tick()
     expect(Math.abs(snap.country.stability - 65)).toBeLessThanOrEqual(5)
@@ -180,10 +181,13 @@ describe('T-014 stage 4 part 2 — country stability derivation', () => {
     // treasury (T-010) values. If any of these numbers shift it means either
     // (a) an upstream rng draw moved (would also break T-008…T-013 locks),
     // or (b) STABILITY_APPROVAL_WEIGHT_P1 / STABILITY_TREASURY_WEIGHT_P1 /
-    // STARTING_TREASURY_P1 changed.
-    // Computed exactly: approval=55.98530864197531 × 0.7 +
-    //   treasuryHealth = clamp(48883.1689836774 / 50000, 0, 1) = 0.977663379673548
-    //   stability = 39.18971604938272 + 29.32990139020644 ≈ 68.51961743958916
+    // STARTING_TREASURY_P1 changed, or (c) Aurelia's target_budget moved
+    // (T-030: 100_000 → 99_000 to balance the tick).
+    // Computed exactly (T-030 values):
+    //   approval     = 55.98530864197531
+    //   treasury     = 49883.1689836774
+    //   treasuryHealth = clamp(49883.1689836774 / 50000, 0, 1) = 0.99766337967354802
+    //   stability    = 39.189716049382717 + 29.929901390206441 ≈ 69.11961743958916
     // The lint rule no-loss-of-precision blocks the full 16-digit literal
     // (JS doubles only carry ~15.95 decimal digits), so we hand-construct
     // the same value from its arithmetic factors and assert via toBeCloseTo.
@@ -193,7 +197,7 @@ describe('T-014 stage 4 part 2 — country stability derivation', () => {
     // T-010 treasury (both have their own determinism locks in
     // approval_legitimacy.spec.ts and simple_economy.spec.ts).
     const lockedApproval = 55.98530864197531
-    const lockedTreasury = 48883.1689836774
+    const lockedTreasury = 49883.1689836774
     const expected = lockedApproval * 0.7 + (lockedTreasury / 50_000) * 30
     expect(snap.country.stability).toBeCloseTo(expected, 10)
   })

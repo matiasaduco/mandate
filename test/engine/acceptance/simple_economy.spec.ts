@@ -363,21 +363,17 @@ describe('T-009 — Stage 2: tax income + dampening curve', () => {
 
 describe('T-010 — Stage 2: budget spend + treasury balance', () => {
   it('On Aurelia start, after 1 tick, balance ≈ 0 within ±1% of tax_income flow', () => {
-    // Aurelia is calibrated so target_budget == steady-state tax_income flow
-    // (~100k credits/tick), which makes the per-tick balance ≈ 0. The exact
-    // tax_income flow after 1 tick is 98_883.17 (T-009 determinism lock),
-    // so the expected balance is 98_883.17 − 100_000 ≈ −1_116.83 — well
-    // within ±1% of 98_883.17 (≈ ±988.83 absolute on each side, so |balance|
-    // is permitted to land in [0, 988.83] for "approximately zero" or, more
-    // generously here, within ±1% of the tax flow.)
+    // T-030 — Aurelia is calibrated so target_budget == engine's noise-mean
+    // steady-state tax_income flow (99_000 credits/tick), which makes the
+    // per-tick balance ≈ 0. The exact tax_income flow after 1 tick is
+    // 98_883.17 (T-009 determinism lock), so the expected balance is
+    // 98_883.17 − 99_000 ≈ −116.83 — well within ±1% of 98_883.17.
     const engine = createFixtureEngine()
     const snap = engine.tick()
 
     const tolerance = 0.01 * snap.flows.tax_income // 1% of tax_income
-    // |balance| ≤ ~1.1% of tax_income — tight band that still leaves room
-    // for the ±0.5% noise drift on next-tick sectors but pins the intent
-    // ("balance is near zero").
-    expect(Math.abs(snap.flows.balance)).toBeLessThanOrEqual(tolerance + 200)
+    // |balance| ≤ 1% of tax_income — pins the intent ("balance is near zero").
+    expect(Math.abs(snap.flows.balance)).toBeLessThanOrEqual(tolerance)
   })
 
   it('Setting target_budget > tax_income drains treasury at the difference rate', () => {
@@ -534,14 +530,16 @@ describe('T-010 — Stage 2: budget spend + treasury balance', () => {
     // Pins the T-010 budget + balance + treasury computation. If these
     // numbers shift it means either (a) an upstream rng draw moved (which
     // would also break T-008 / T-009 locks), (b) the budget formula
-    // changed, or (c) Aurelia's target_budget moved off 100_000. Update
-    // only if the change is intentional.
+    // changed, or (c) Aurelia's target_budget moved off 99_000 (T-030 set
+    // it to the engine's noise-mean steady-state tax_income flow so the
+    // per-tick balance lands at ≈ 0; see fixture comment). Update only if
+    // the change is intentional.
     const engine = createFixtureEngine()
     const snap = engine.tick()
 
-    expect(snap.flows.budget_spend).toBe(100_000)
-    expect(snap.flows.balance).toBeCloseTo(-1116.8310163225979, 6)
-    expect(snap.country.treasury).toBeCloseTo(48883.1689836774, 6)
+    expect(snap.flows.budget_spend).toBe(99_000)
+    expect(snap.flows.balance).toBeCloseTo(-116.8310163225979, 6)
+    expect(snap.country.treasury).toBeCloseTo(49883.1689836774, 6)
   })
 })
 
@@ -642,15 +640,16 @@ describe('T-015 stage 5 — treasury threshold events', () => {
 
   it('Determinism lock for seed=1: treasury_prev is updated to country.treasury after each tick on Aurelia', () => {
     // Aurelia starts at treasury=50_000, treasury_prev=50_000. After tick 1,
-    // T-010 writes country.treasury to its locked value (48_883.169) and stage 5
-    // mirrors it onto treasury_prev. No TreasuryThresholdCrossed fires
-    // (treasury stays well above 0).
+    // T-010 writes country.treasury to its locked value (49_883.169 with
+    // T-030's balanced target_budget=99_000) and stage 5 mirrors it onto
+    // treasury_prev. No TreasuryThresholdCrossed fires (treasury stays well
+    // above 0).
     const events: EngineEvent[] = []
     const engine = createFixtureEngine()
     engine.subscribe((e) => events.push(e))
     const snap = engine.tick()
 
-    expect(snap.country.treasury).toBeCloseTo(48883.1689836774, 6)
+    expect(snap.country.treasury).toBeCloseTo(49883.1689836774, 6)
     expect(snap.treasury_prev).toBe(snap.country.treasury)
     const treasuryCrossings = events.filter(
       (e) => e.type === 'TreasuryThresholdCrossed',

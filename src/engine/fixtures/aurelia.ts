@@ -119,8 +119,15 @@ const aureliaCountry: Country = {
   },
   legitimacy: 0,
   stability: 65,
-  // P1: pinned to the steady-state tax_income flow (100k credits/tick).
-  target_budget: 100_000,
+  // P1: pinned to the engine's steady-state tax_income flow at the noise-mean
+  // (GDP=400_000 × effective_rate=0.2475 = 99_000 credits/tick), so the
+  // per-tick balance lands at ≈ 0 at the noise mean — matching the design
+  // intent in [[Sample Tick]] § Scenario 1 ("steady-state stable at this
+  // configuration"). The 1k offset from the vault's 100k narrative value
+  // comes from the T-009 incidence weights (income=0.6, corporate=0.25,
+  // consumption=0.15) producing an effective rate of 24.75% rather than the
+  // round 25% the narrative quotes; both are placeholder-pending-T-031.
+  target_budget: 99_000,
   pops: aureliaPops,
   sectors: aureliaSectors,
   sliders: { tax_income: 25, tax_corporate: 30, tax_consumption: 15 },
@@ -146,7 +153,11 @@ export function createAureliaState(): EngineState {
       approval_below_crisis_ticks: 0,
     },
     rng_state: 0,
-    flows: { tax_income: 100_000, budget_spend: 100_000, balance: 0 },
+    // Steady-state at the noise-mean: tax_income flow = GDP×effective_rate =
+    // 400_000 × 0.2475 = 99_000; budget_spend mirrors target_budget; balance =
+    // 0. Overwritten by stage 2 every tick — seed values only matter to UI
+    // reads before tick 1.
+    flows: { tax_income: 99_000, budget_spend: 99_000, balance: 0 },
     approval_prev: 56,
     // T-015: comparator for stage 5's treasury-crossing detection. Mirrors the
     // starting country.treasury (50_000) so the first tick can detect a fresh
