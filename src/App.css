@@ -9,6 +9,9 @@
 .app__main {
   flex: 1 1 auto;
   padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 /* --- TopBar ----------------------------------------------------------- */
@@ -195,6 +198,209 @@
 /* Single-column fallback under 1024px, per Player View edge case. */
 @media (max-width: 1023px) {
   .overview-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- EconomyPanel (T-023) -------------------------------------------- */
+
+.economy-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 16px;
+}
+
+.economy-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-width: 0;
+}
+
+.economy-panel__section h3 {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.economy-panel__flow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.economy-panel__flow-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text);
+}
+
+.economy-panel__flow-value {
+  font-family: var(--mono);
+  font-size: 16px;
+  color: var(--text-h);
+}
+
+.economy-panel__flow-value.is-negative {
+  color: var(--danger);
+}
+
+.economy-panel__sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.economy-panel__sum {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--accent);
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+}
+
+.economy-panel__sum.is-off {
+  color: var(--danger);
+  background: rgba(214, 51, 108, 0.08);
+  border-color: var(--danger);
+}
+
+.economy-panel__sum-hint {
+  margin-left: 6px;
+  font-size: 11px;
+  opacity: 0.9;
+}
+
+/* --- Slider (T-023) ------------------------------------------------- */
+
+.slider {
+  display: grid;
+  grid-template-columns: 110px 1fr 56px 12px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-h);
+}
+
+.slider__label {
+  color: var(--text);
+}
+
+.slider input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.slider__value {
+  font-family: var(--mono);
+  text-align: right;
+}
+
+.slider__recent-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.slider.is-recently-changed .slider__recent-dot {
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+/* --- GdpChart (T-023) ----------------------------------------------- */
+
+.gdp-chart {
+  width: 100%;
+}
+
+.gdp-chart--empty {
+  opacity: 0.4;
+}
+
+/* --- SectorBreakdown (T-023) ---------------------------------------- */
+
+.sector-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-h);
+}
+
+.sector-breakdown__header,
+.sector-breakdown__footer {
+  display: grid;
+  grid-template-columns: 110px 1fr 1fr;
+  gap: 10px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text);
+}
+
+.sector-breakdown__footer {
+  font-family: var(--mono);
+  color: var(--text-h);
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+}
+
+.sector-breakdown__row {
+  display: grid;
+  grid-template-columns: 110px 1fr 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.sector-breakdown__name {
+  text-transform: capitalize;
+}
+
+.sector-breakdown__cell {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.sector-breakdown__bar-track {
+  height: 6px;
+  background: var(--accent-bg);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.sector-breakdown__bar {
+  height: 100%;
+  background: var(--accent);
+}
+
+.sector-breakdown__bar--employment {
+  background: var(--accent);
+  opacity: 0.6;
+}
+
+.sector-breakdown__value {
+  font-family: var(--mono);
+  text-align: right;
+}
+
+/* Single-column fallback under 1024px for the economy panel grid. */
+@media (max-width: 1023px) {
+  .economy-panel {
     grid-template-columns: 1fr;
   }
 }
