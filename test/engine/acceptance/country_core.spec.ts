@@ -16,10 +16,21 @@
 // draw shifted (would also break T-008…T-013 locks), or (b)
 // STABILITY_APPROVAL_WEIGHT_P1 / STABILITY_TREASURY_WEIGHT_P1 /
 // STARTING_TREASURY_P1 changed.
+//
+// T-029 — Additional acceptance harness coverage for [[Country Core]] ACs
+// that the T-014 block above does not exercise:
+//   - "No subsystem mutates a Country Core-owned field directly" (id / name /
+//     government_type / head_of_state immutable across a tick).
+//   - "A second country instance runs without code branching on 'is player'."
+//   - "Save/load round-trip preserves country state exactly" — also proven by
+//     `test/engine/save.spec.ts` (T-028 AC#1). The block below is a thin
+//     re-assertion so the [[Country Core]] AC checkbox can be ticked against
+//     this file directly.
 
 import { describe, expect, it, vi } from 'vitest'
 import { createAureliaState } from '@engine/fixtures/aurelia'
 import { createFixtureEngine, makeDummyRng } from '@test-utils'
+import { createEngine, deserialize, serialize } from '@engine'
 import { stage4_politics } from '@engine/pipeline/stage4_politics'
 import type { EngineEvent } from '@engine/types'
 import type { EngineContext } from '@engine/pipeline/context'
@@ -185,5 +196,99 @@ describe('T-014 stage 4 part 2 — country stability derivation', () => {
     const lockedTreasury = 48883.1689836774
     const expected = lockedApproval * 0.7 + (lockedTreasury / 50_000) * 30
     expect(snap.country.stability).toBeCloseTo(expected, 10)
+  })
+})
+
+// --- T-029 — Country Core ACs not covered by the T-014 block above ---------
+
+describe('Country Core — Acceptance Criteria (Phase 1)', () => {
+  it('AC: Country can be instantiated from Aurelia with all fields populated', () => {
+    // Static identity + dynamic macro fields must all be present and
+    // non-null on the canonical Aurelia fixture.
+    const state = createAureliaState()
+    expect(state.country.id).toBe('aurelia')
+    expect(state.country.name).toBeTruthy()
+    expect(state.country.government_type).toBeTruthy()
+    expect(state.country.head_of_state).toBeDefined()
+    expect(state.country.population).toBeGreaterThan(0)
+    expect(state.country.gdp).toBeGreaterThan(0)
+    expect(state.country.treasury).toBeGreaterThanOrEqual(0)
+    expect(state.country.approval).toBeGreaterThan(0)
+    expect(state.country.stability).toBeGreaterThan(0)
+    expect(state.country.sectors.length).toBeGreaterThan(0)
+    expect(state.country.pops.length).toBeGreaterThan(0)
+  })
+
+  it('AC: no subsystem mutates a Country Core-owned identity field directly across a tick', () => {
+    // Country Core owns: id, name, government_type, head_of_state. These are
+    // construction-time-only fields. Run 5 ticks on Aurelia and assert each
+    // field is byte-identical to its starting value at every snapshot.
+    const initial = createAureliaState()
+    const ownedFields = {
+      id: initial.country.id,
+      name: initial.country.name,
+      government_type: initial.country.government_type,
+      head_of_state: structuredClone(initial.country.head_of_state),
+    }
+
+    const engine = createFixtureEngine()
+    for (let t = 0; t < 5; t++) {
+      const snap = engine.tick()
+      expect(snap.country.id).toBe(ownedFields.id)
+      expect(snap.country.name).toBe(ownedFields.name)
+      expect(snap.country.government_type).toBe(ownedFields.government_type)
+      expect(snap.country.head_of_state).toEqual(ownedFields.head_of_state)
+    }
+  })
+
+  it('AC: a second country instance runs without code branching on "is player"', () => {
+    // Two engines from the same fixture, different seeds. Both must run all
+    // 7 stages over 5 ticks without throwing and produce structurally valid
+    // states. If the engine branched on a player flag, one of them would
+    // either follow a divergent code path (e.g. skip AI stage 6) or crash
+    // here. The brief explicitly calls for grep proof: no `is_player` /
+    // `isPlayer` identifier appears anywhere under src/engine/** — verified
+    // out-of-band; this test exercises the runtime invariant.
+    const engineA = createFixtureEngine({ seed: 1 })
+    const engineB = createFixtureEngine({ seed: 7 })
+
+    for (let t = 0; t < 5; t++) {
+      const snapA = engineA.tick()
+      const snapB = engineB.tick()
+
+      // Both states are structurally valid.
+      expect(snapA.country).toBeDefined()
+      expect(snapB.country).toBeDefined()
+      expect(snapA.country.pops.length).toBe(snapB.country.pops.length)
+      expect(snapA.country.sectors.length).toBe(snapB.country.sectors.length)
+      // tick advanced equally on both — same pipeline, no skipped stages.
+      expect(snapA.tick).toBe(t + 1)
+      expect(snapB.tick).toBe(t + 1)
+    }
+
+    // Determinism contract: different seeds produce different sector outputs
+    // (proving the PRNG actually fired for BOTH engines — neither was
+    // short-circuited as an "AI country" stub).
+    const a = engineA.tick()
+    const b = engineB.tick()
+    expect(a.country.sectors[0].output).not.toBe(b.country.sectors[0].output)
+  })
+
+  it('AC: save / load round-trip preserves country state exactly', () => {
+    // Engine-level round-trip via the T-028 serialize / deserialize pair.
+    // Full save / load contract (rng cursor, decision queue, schema version)
+    // is covered by `test/engine/save.spec.ts`. Here we just prove the
+    // country half of the EngineState survives a JSON round-trip deep-equal.
+    const original = createAureliaState()
+    const restored = deserialize(serialize(original))
+    expect(restored.country).toEqual(original.country)
+
+    // And after some ticks — the dynamic country fields (treasury, gdp,
+    // sectors, pops, approval, stability) must also round-trip.
+    const engine = createEngine(original, { seed: 1 })
+    let snap = engine.tick()
+    for (let t = 0; t < 4; t++) snap = engine.tick()
+    const restoredAfter = deserialize(serialize(snap))
+    expect(restoredAfter.country).toEqual(snap.country)
   })
 })

@@ -34,6 +34,30 @@ import {
 } from '@engine/tunables'
 import type { Decision } from '@engine/types'
 
+describe('POP Types — Phase 1 AC: instantiation', () => {
+  it('AC: all 5 segments from Aurelia instantiate with declared sizes', () => {
+    // The vault AC says "All 5 segments from [[Sample Country - Aurelia]]
+    // instantiate with declared sizes." The canonical declared values live in
+    // src/engine/fixtures/aurelia.ts; we mirror them here so a change to the
+    // fixture surfaces at this AC's boundary (rather than silently shifting
+    // every downstream determinism lock).
+    const state = createAureliaState()
+    const byType = new Map(state.country.pops.map((p) => [p.pop_type, p] as const))
+
+    expect(state.country.pops).toHaveLength(5)
+    expect(byType.get('urban_workers')!.size).toBe(12_000_000)
+    expect(byType.get('rural_workers')!.size).toBe(6_000_000)
+    expect(byType.get('middle_class')!.size).toBe(8_000_000)
+    expect(byType.get('capitalists')!.size).toBe(600_000)
+    expect(byType.get('intelligentsia')!.size).toBe(3_400_000)
+
+    // Total matches the declared country population.
+    const sum = state.country.pops.reduce((acc, p) => acc + p.size, 0)
+    expect(state.country.population).toBe(sum)
+    expect(state.country.population).toBe(30_000_000)
+  })
+})
+
 describe('T-011 stage 3 — POP income & employment', () => {
   it('On Aurelia start, after 1 tick, each POPs income is within ±2% of its starting value', () => {
     // The income formula is calibrated (POP_INCOME_COEFF_P1) so that at the
