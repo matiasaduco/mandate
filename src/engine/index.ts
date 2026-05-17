@@ -22,6 +22,16 @@ export type {
 
 export type { Rng } from './rng'
 
+// T-028 — Save / load surface. The engine owns serialization (versioned JSON
+// envelope) and the factory that restores an engine from a saved snapshot
+// with its PRNG cursor intact. The UI does the actual localStorage I/O.
+export {
+  serialize,
+  deserialize,
+  SaveLoadError,
+  SAVE_SCHEMA_VERSION,
+} from './save'
+
 // createEngine — single entry point for the headless simulation.
 //
 // Contract (see vault: 06 - Reference / Tech Stack § Boundary contract):
@@ -65,6 +75,13 @@ export function createEngine(initialState: EngineState, options: EngineOptions):
     state = runTick(state, ctx)
     // Advance the tick counter once per tick() call.
     state = { ...state, tick: state.tick + 1 }
+    // T-028 — Persist the PRNG cursor into the snapshot so save/load can
+    // restore the exact trajectory. Aurelia's seed state is 0 (irrelevant —
+    // `createEngine` builds the RNG from `options.seed`, not this field), but
+    // after the first tick the snapshot's `rng_state` reflects every draw
+    // consumed by stages 1–6 of this tick. `createEngineFromSavedState`
+    // restores this value into a fresh RNG via `rng.setState(...)`.
+    state = { ...state, rng_state: rng.getState() }
     // Dispatch all events buffered during the stages, then clear the buffer.
     bus.flush()
     return cloneState(state)
@@ -77,7 +94,29 @@ export function createEngine(initialState: EngineState, options: EngineOptions):
     }
   }
 
-  return { applyDecisions, tick, subscribe }
+  return { applyDecisions, tick, subscribe, rng }
+}
+
+/**
+ * T-028 — Rebuild an engine from a previously serialized snapshot, restoring
+ * the exact PRNG cursor so the post-load trajectory matches a never-saved
+ * run tick-for-tick.
+ *
+ * Implementation note: we do NOT change `createEngine` itself — Aurelia's
+ * fixture pins `rng_state: 0` and existing T-009 / T-010 determinism locks
+ * depend on the seed (not this field) seeding the PRNG. Instead, this factory
+ * wraps `createEngine` and immediately overrides the freshly-created RNG's
+ * cursor with the saved `state.rng_state`. The `seed: 1` passed below is
+ * therefore a throwaway — the immediate `setState` overrides it.
+ *
+ * The save's `decision_queue` is preserved as-is so any decisions the player
+ * queued before saving still fire at stage 0 of the next tick post-load
+ * (resolved ambiguity in the T-028 brief).
+ */
+export function createEngineFromSavedState(state: EngineState): Engine {
+  const engine = createEngine(state, { seed: 1 })
+  engine.rng.setState(state.rng_state)
+  return engine
 }
 
 function cloneState(state: EngineState): EngineState {

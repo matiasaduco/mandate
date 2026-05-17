@@ -18,6 +18,14 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    // T-028 — Give jsdom a real http origin so window.localStorage is
+    // available (the default "about:blank" / opaque origin throws a
+    // SecurityError on localStorage access). All UI tests that touch save /
+    // load rely on this; existing tests are unaffected because none of them
+    // access localStorage.
+    environmentOptions: {
+      jsdom: { url: 'http://localhost/' },
+    },
     setupFiles: ['./test/setup.ts'],
     include: ['test/**/*.{test,spec}.{ts,tsx}'],
     passWithNoTests: true,

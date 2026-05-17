@@ -64,6 +64,7 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
       approval_prev: _bap,
       approval_threshold_last_fired_tick: _bat,
       treasury_prev: _btp,
+      rng_state: _brng,
       ...beforeRest
     } = before
     const {
@@ -73,6 +74,7 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
       approval_prev: _aap,
       approval_threshold_last_fired_tick: _aat,
       treasury_prev: _atp,
+      rng_state: _arng,
       ...afterRest
     } = after!
     void _t1
@@ -85,6 +87,8 @@ describe('T-006 tick runner + stages skeleton + decision queue', () => {
     void _aap
     void _aat
     void _atp
+    void _brng
+    void _arng
     expect(afterRest).toEqual(beforeRest)
     const {
       sectors: _bs,
