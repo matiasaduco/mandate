@@ -30,22 +30,16 @@
 import type { DecreeId } from './Decision'
 import type { PopType } from './POP'
 import type { SectorType } from './Sector'
-
-// TODO(T-031): promote magnitudes/costs to Tunables. These local P1 constants
-// keep the catalog self-contained until the balancing pass lifts them into
-// ~/Documents/Tycoon/06 - Reference/Tunables.md.
-const PUBLIC_ADDRESS_HAPPINESS_DELTA_P1 = 5
-const PUBLIC_ADDRESS_DURATION_P1 = 1
-const EMERGENCY_RELIEF_HAPPINESS_DELTA_P1 = 10
-const EMERGENCY_RELIEF_DURATION_P1 = 3
-const EMERGENCY_RELIEF_COST_P1 = 3_000
-const INDUSTRIAL_SUBSIDY_PCT_P1 = 0.1
-const INDUSTRIAL_SUBSIDY_DURATION_P1 = 5
-// LOCKED by Simple Economy.md AC #5 ("industrial_subsidy decree ... reduces
-// treasury by its cost_treasury immediately"). Mirrors the vault literal `5000`
-// from the Simple Economy "Consumes" block. Keeps the `_P1` suffix for
-// consistency with sibling constants even though this value is fixed by AC.
-const INDUSTRIAL_SUBSIDY_COST_P1 = 5_000
+import {
+  EMERGENCY_RELIEF_COST_P1,
+  EMERGENCY_RELIEF_DURATION_P1,
+  EMERGENCY_RELIEF_HAPPINESS_DELTA_P1,
+  INDUSTRIAL_SUBSIDY_COST_P1,
+  INDUSTRIAL_SUBSIDY_DURATION_P1,
+  INDUSTRIAL_SUBSIDY_PCT_P1,
+  PUBLIC_ADDRESS_DURATION_P1,
+  PUBLIC_ADDRESS_HAPPINESS_DELTA_P1,
+} from '../tunables'
 
 export const DECREE_DURATIONS_P1 = {
   public_address: PUBLIC_ADDRESS_DURATION_P1,
