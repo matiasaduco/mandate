@@ -103,7 +103,13 @@ const aureliaCountry: Country = {
   climate_zone: 'temperate',
   neighbors: [],
   government_type: 'democracy',
-  head_of_state: { name: 'Elena Vorra', party: 'Center Coalition' },
+  head_of_state: { name: 'Elena Vorra', party: 'Center Coalition', role: 'President' },
+  // T-035 — Banner colour for the PlayerCountryCard. Brand purple as the
+  // default per the vault-context brief; no explicit colour cue in the Aurelia
+  // narrative, so we pick the existing accent (matches the topbar / sliders
+  // hue so the card feels rooted in the rest of the UI). Identity-only — no
+  // tick stage reads this.
+  banner_color: '#aa3bff',
   population: 30_000_000,
   gdp: 400_000,
   treasury: 50_000,
