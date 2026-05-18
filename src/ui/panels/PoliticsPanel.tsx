@@ -28,6 +28,7 @@
 //   - Otherwise                              → top 3 drivers by |delta|.
 //   See `politicsWhy.ts` for the math.
 
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useMemo } from 'react'
 
 import { DECREE_CATALOG_P1 } from '@engine/entities/Decree'
@@ -49,6 +50,7 @@ import {
   type GameStore,
   type GameStoreState,
 } from '@ui/stores/gameStore'
+import { MOTION_KPI_TWEEN_MS, SPRING_KPI } from '@ui/theme/tokens'
 
 export type PoliticsPanelProps = {
   /**
@@ -184,6 +186,19 @@ export function PoliticsPanel({ store }: PoliticsPanelProps) {
   // --- Render -------------------------------------------------------------
   const arrow = trendArrow(approval, approvalPrev)
   const approvalDisplay = Math.round(approval)
+  // T-034 — KPI spring-tween on the approval headline. Reduced-motion bypasses
+  // both AnimatePresence and the spring so the displayed text is a plain
+  // string (mirrors the OverviewPanel `NumericCard` pattern).
+  const reducedMotion = useReducedMotion()
+  const approvalTransition =
+    reducedMotion === true
+      ? { duration: 0 }
+      : {
+          type: 'spring' as const,
+          ...SPRING_KPI,
+          duration: MOTION_KPI_TWEEN_MS / 1000,
+        }
+  const approvalText = String(approvalDisplay)
   // Aria value mirrors the rounded display number AND honors the approval
   // domain bounds (APPROVAL_FLOOR / APPROVAL_CEILING from tunables — see
   // ticket brief: "Tunables: APPROVAL_FLOOR, APPROVAL_CEILING, HAPPINESS_RANGE
@@ -208,13 +223,28 @@ export function PoliticsPanel({ store }: PoliticsPanelProps) {
             <span
               className="politics-panel__approval-value"
               data-testid="politics-approval-value"
+              data-kpi-tween={reducedMotion === true ? 'instant' : 'spring'}
               aria-valuemin={APPROVAL_FLOOR}
               aria-valuemax={APPROVAL_CEILING}
               aria-valuenow={approvalDisplay}
               role="meter"
               tabIndex={0}
             >
-              {approvalDisplay}
+              {reducedMotion === true ? (
+                <span>{approvalText}</span>
+              ) : (
+                <AnimatePresence mode="popLayout" initial={false}>
+                  <motion.span
+                    key={approvalText}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={approvalTransition}
+                  >
+                    {approvalText}
+                  </motion.span>
+                </AnimatePresence>
+              )}
             </span>
           </Tooltip>
           <Tooltip tooltipKey="APPROVAL_INERTIA_TAU">

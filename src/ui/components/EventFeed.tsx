@@ -9,6 +9,8 @@
 // `createGameStore({ seed: 1 })` via the `store` prop; app code passes nothing
 // and the singleton resolves via `getGameStore()`.
 
+import { motion, useReducedMotion } from 'framer-motion'
+
 import type { EngineEvent } from '@engine/types'
 import { eventSeverity, formatEvent } from '@ui/components/eventCopy'
 import { Tooltip } from '@ui/components/Tooltip'
@@ -18,6 +20,7 @@ import {
   type GameStore,
   type GameStoreState,
 } from '@ui/stores/gameStore'
+import { EASE_OUT_CUBIC, MOTION_EVENT_SLIDE_IN_MS } from '@ui/theme/tokens'
 
 export type EventFeedProps = {
   /**
@@ -51,6 +54,11 @@ export function EventFeed({ store, events, limit, heading }: EventFeedProps) {
   // hook call sequence stays stable across renders; we just don't subscribe.
   const resolved: GameStore = store ?? getGameStore()
   const storeEvents = resolved((s: GameStoreState) => s.events)
+  // T-034: each new event slides in from the right. Reduced-motion users get
+  // an instant transition (no slide, no opacity tween). `useReducedMotion()`
+  // returns the current value of the `(prefers-reduced-motion: reduce)` media
+  // query — framer-motion sets it from `window.matchMedia` once on mount.
+  const reducedMotion = useReducedMotion()
 
   // Pick the source list: explicit `events` prop wins, else the store slice.
   const source = events ?? storeEvents
@@ -88,22 +96,35 @@ export function EventFeed({ store, events, limit, heading }: EventFeedProps) {
           const key = `${event.tick}-${event.type}-${idx}`
           // Trigger explanation lives in tooltips.ts under `event.<Type>`.
           const tooltipKey = `event.${event.type}` as TooltipKey
+          // Slide-in transition (T-034). Reduced-motion: zero duration +
+          // initial=animate so the entry pops into place instantly. The
+          // `data-slide-in` attribute is asserted by the reduced-motion test.
+          const transition = reducedMotion === true
+            ? { duration: 0 }
+            : { duration: MOTION_EVENT_SLIDE_IN_MS / 1000, ease: EASE_OUT_CUBIC }
           return (
-            <Tooltip key={key} tooltipKey={tooltipKey}>
-              <li
-                className={`event-feed__item event-feed__item--${severity}`}
-                data-testid="event-feed-item"
-                data-event-type={event.type}
-                data-event-tick={event.tick}
-                data-severity={severity}
-                tabIndex={0}
-              >
-                <span className="event-feed__tick" aria-hidden="true">
-                  {`t${event.tick}`}
+            <motion.li
+              key={key}
+              className={`event-feed__item event-feed__item--${severity}`}
+              data-testid="event-feed-item"
+              data-event-type={event.type}
+              data-event-tick={event.tick}
+              data-severity={severity}
+              data-slide-in={reducedMotion === true ? 'instant' : 'slide'}
+              tabIndex={0}
+              initial={reducedMotion === true ? false : { opacity: 0, x: 24 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={transition}
+            >
+              <Tooltip tooltipKey={tooltipKey}>
+                <span className="event-feed__item-inner">
+                  <span className="event-feed__tick" aria-hidden="true">
+                    {`t${event.tick}`}
+                  </span>
+                  <span className="event-feed__text">{formatEvent(event)}</span>
                 </span>
-                <span className="event-feed__text">{formatEvent(event)}</span>
-              </li>
-            </Tooltip>
+              </Tooltip>
+            </motion.li>
           )
         })}
       </ul>

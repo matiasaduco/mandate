@@ -40,8 +40,8 @@ import {
   type TooltipKey,
 } from '@ui/copy/tooltips'
 
-/** Animation hook. T-034 will add more variants here. */
-export type TooltipMotionVariant = 'fade' | 'scale-fade'
+/** Animation hook. T-034 adds the `'hud'` variant for HUD surfaces. */
+export type TooltipMotionVariant = 'fade' | 'scale-fade' | 'hud'
 
 type MotionPreset = {
   initial: Record<string, number>
@@ -62,6 +62,16 @@ const MOTION_VARIANTS: Record<TooltipMotionVariant, MotionPreset> = {
     animate: { opacity: 1, scale: 1 },
     exit: { opacity: 0, scale: 0.96 },
     transition: { duration: 0.14, ease: 'easeOut' },
+  },
+  // T-034 — HUD surfaces (TopBar cells, Slider labels, DecreeButton). Opacity
+  // + small downward translate; intentionally NO scale so the tooltip doesn't
+  // compete with the `is-warning` / `is-critical` pulse on top-bar cells when
+  // a threshold is crossed.
+  hud: {
+    initial: { opacity: 0, y: -4 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -4 },
+    transition: { duration: 0.11, ease: 'easeOut' },
   },
 }
 

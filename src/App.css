@@ -1171,3 +1171,226 @@
   outline-offset: 2px;
   border-radius: 4px;
 }
+
+/* --- T-034 HUD chrome ---------------------------------------------------
+ *
+ * The TopBar restyle: subtler border, slightly heavier shadow, accent gradient
+ * underline. Cells (treasury, approval) gain a pulse animation when at-risk.
+ *
+ * Pulse classes are added by the TopBar component based on snapshot state
+ * (treasury <= 0 → is-critical; approval <= 30/20/15 → is-warning/critical).
+ * No engine event drives this — it is pure CSS reaction to snapshot state.
+ */
+
+.topbar {
+  box-shadow: 0 1px 0 var(--border), 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.topbar__stat {
+  position: relative;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: background 0.2s ease-out, color 0.2s ease-out;
+}
+
+.topbar__stat.is-warning {
+  background: rgba(245, 158, 11, 0.10);
+  color: #c97a00;
+  animation: hud-pulse-warning 1.4s ease-in-out infinite;
+}
+
+.topbar__stat.is-warning .topbar__stat-value,
+.topbar__stat.is-warning .topbar__stat-label {
+  color: #c97a00;
+}
+
+.topbar__stat.is-critical {
+  background: rgba(214, 51, 108, 0.12);
+  color: var(--danger);
+  animation: hud-pulse-critical 1.1s ease-in-out infinite;
+}
+
+.topbar__stat.is-critical .topbar__stat-value,
+.topbar__stat.is-critical .topbar__stat-label {
+  color: var(--danger);
+}
+
+@keyframes hud-pulse-warning {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.0); }
+  50%      { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.22); }
+}
+
+@keyframes hud-pulse-critical {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(214, 51, 108, 0.0); }
+  50%      { box-shadow: 0 0 0 5px rgba(214, 51, 108, 0.28); }
+}
+
+/* Reduced-motion: disable the pulse keyframe loops on the HUD cells AND on
+ * the speed-driven calendar pulse. Mount-fade / KPI tween / event slide-in
+ * animations are framer-motion driven and skip themselves on reduced motion
+ * via `useReducedMotion()` (see PanelLayer.tsx, OverviewPanel.tsx,
+ * EventFeed.tsx). */
+@media (prefers-reduced-motion: reduce) {
+  .topbar__calendar.pulse-active,
+  .topbar__stat.is-warning,
+  .topbar__stat.is-critical {
+    animation: none;
+  }
+}
+
+/* --- T-034 PanelLayer + PanelShell -------------------------------------
+ *
+ * The panel layer is the absolute-positioning anchor for the four floating
+ * panels. Width capped at the largest sensible panel arrangement; height
+ * grows with content. `react-rnd` instances inside it set `position: absolute`
+ * by default and resolve coordinates against THIS surface.
+ */
+.app__panels-host {
+  position: relative;
+  min-width: 0;
+  /* Anchor the floating panels: enough room for the default layout to render
+   * without the panels colliding with the right-edge boundary. Falls back to
+   * fluid behaviour at narrower viewports — the panels are still
+   * `bounds="parent"` constrained, so they clamp to whatever this rectangle
+   * actually measures at runtime. */
+  min-height: 920px;
+}
+
+.panel-layer {
+  position: relative;
+  width: 100%;
+  /* Anchor that react-rnd's `bounds="parent"` measures against. Explicit
+   * height (not `100%`, which collapses to `auto` when the parent has
+   * `min-height` only) so the bounds rectangle has real width × height and
+   * panels can drag throughout the panels-host area without being clamped
+   * to (0,0) when the document layout context confuses re-resizable. */
+  height: 100%;
+  min-height: 920px;
+}
+
+/* The mount-fade plays once on cold load. Animating ONLY opacity is
+ * deliberate: re-resizable owns the inline `transform` on the panel-shell
+ * for positioning, and any animation on `transform` would fight that. The
+ * stagger comes from `--mount-index` (set inline on the Rnd outer by
+ * PanelShell.tsx). */
+@keyframes panel-mount-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.panel-shell {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 1px 0 var(--border), 0 8px 24px rgba(0, 0, 0, 0.06);
+  /* `display: flex` is also set inline by PanelShell.tsx as a defensive
+   * override; keep it in the className too so the static cascade matches. */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: panel-mount-fade-in 220ms ease-out backwards;
+  animation-delay: calc(var(--mount-index, 0) * 60ms);
+}
+
+.panel-shell__handle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: linear-gradient(
+    180deg,
+    rgba(170, 59, 255, 0.06),
+    rgba(170, 59, 255, 0.02)
+  );
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text);
+  cursor: grab;
+  user-select: none;
+}
+
+.panel-shell__handle:active {
+  cursor: grabbing;
+}
+
+.panel-shell__title {
+  color: var(--text-h);
+}
+
+.panel-shell__body {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 14px 16px;
+  min-height: 0;
+}
+
+/* The Rnd component wires the resize handle as a child div with default
+ * inline styles. Give it a visible affordance — a small diagonal grip cue at
+ * the bottom-right corner so the resize hot-zone is discoverable. */
+.panel-shell > div[class*='resizable-handle'],
+.panel-shell .react-rnd-handle,
+.panel-shell > span:last-child {
+  /* react-rnd's default handle div is a transparent span; styling by
+   * structural selector is fragile, but adding a corner cue via the parent
+   * is robust. */
+}
+
+.panel-shell::after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 10px;
+  height: 10px;
+  background:
+    linear-gradient(135deg, transparent 0 50%, var(--accent-border) 50% 60%, transparent 60% 70%, var(--accent-border) 70% 80%, transparent 80%);
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* T-034 — EventFeed item wraps its tooltip trigger in an inner span. The
+ * original `display: grid` rule was on the <li>; preserve the layout by
+ * mirroring it on the inner wrapper. */
+.event-feed__item-inner {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 8px;
+  align-items: baseline;
+  width: 100%;
+}
+
+/* The motion.li wrapper keeps the existing visual treatment. */
+.event-feed__item {
+  display: block;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  background: rgba(170, 59, 255, 0.04);
+  color: var(--text-h);
+}
+
+.event-feed__item--warning {
+  background: rgba(214, 51, 108, 0.08);
+  color: var(--danger);
+}
+
+/* Reduced-motion: the framer-motion entries already short-circuit their
+ * transitions; this rule disables CSS transitions on the panel-shell handle
+ * affordances so the resize / drag feedback is instant too. */
+@media (prefers-reduced-motion: reduce) {
+  .panel-shell,
+  .panel-shell__handle,
+  .topbar__stat {
+    transition: none;
+  }
+  .panel-shell {
+    animation: none;
+  }
+}

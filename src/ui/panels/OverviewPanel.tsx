@@ -22,6 +22,8 @@
 //     `flows.balance` concept is a per-tick flow and is not appropriate for a
 //     stock card.
 
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+
 import { formatNumber, formatPercent, formatTitle } from '@ui/components/format'
 import { Tooltip } from '@ui/components/Tooltip'
 import { TrendSparkline } from '@ui/components/TrendSparkline'
@@ -32,6 +34,7 @@ import {
   type GameStoreState,
   type TrendKey,
 } from '@ui/stores/gameStore'
+import { MOTION_KPI_TWEEN_MS, SPRING_KPI } from '@ui/theme/tokens'
 
 export type OverviewPanelProps = {
   /**
@@ -67,6 +70,15 @@ function NumericCard({
   // Zustand's referential equality keeps us from re-rendering on unrelated
   // store writes.
   const trend = store((s: GameStoreState) => s.trends[trendKey])
+  // T-034 — spring-tween on the displayed number. We key the inner motion
+  // element by `formatted` so AnimatePresence cycles when the rendered text
+  // changes; framer-motion handles the in/out tween. Reduced-motion bypasses
+  // both the spring and the AnimatePresence to keep the DOM stable.
+  const reducedMotion = useReducedMotion()
+  const transition =
+    reducedMotion === true
+      ? { duration: 0 }
+      : { type: 'spring' as const, ...SPRING_KPI, duration: MOTION_KPI_TWEEN_MS / 1000 }
   return (
     <Tooltip tooltipKey={tooltipKey}>
       <div
@@ -76,7 +88,25 @@ function NumericCard({
         tabIndex={0}
       >
         <div className="overview-card__label">{label}</div>
-        <div className="overview-card__value">{formatted}</div>
+        <div className="overview-card__value" data-kpi-tween={reducedMotion === true ? 'instant' : 'spring'}>
+          {reducedMotion === true ? (
+            // Skip AnimatePresence entirely under reduced motion so the test
+            // harness can assert the absence of motion side-effects.
+            <span>{formatted}</span>
+          ) : (
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.span
+                key={formatted}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={transition}
+              >
+                {formatted}
+              </motion.span>
+            </AnimatePresence>
+          )}
+        </div>
         <TrendSparkline data={trend} />
       </div>
     </Tooltip>
