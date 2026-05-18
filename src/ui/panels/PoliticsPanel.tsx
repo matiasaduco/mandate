@@ -39,6 +39,7 @@ import {
 } from '@engine/tunables'
 import { DecreeButton } from '@ui/components/DecreeButton'
 import { formatTitle } from '@ui/components/format'
+import { Tooltip } from '@ui/components/Tooltip'
 import {
   computeApprovalDrivers,
   formatDriversTooltip,
@@ -203,32 +204,41 @@ export function PoliticsPanel({ store }: PoliticsPanelProps) {
       >
         <h3 id="politics-approval-heading">Approval</h3>
         <div className="politics-panel__headline">
-          <span
-            className="politics-panel__approval-value"
-            data-testid="politics-approval-value"
-            aria-valuemin={APPROVAL_FLOOR}
-            aria-valuemax={APPROVAL_CEILING}
-            aria-valuenow={approvalDisplay}
-            role="meter"
-          >
-            {approvalDisplay}
-          </span>
-          <span
-            className={`politics-panel__trend-arrow politics-panel__trend-arrow--${arrowLabel}`}
-            data-testid="politics-trend-arrow"
-            data-direction={arrowLabel}
-            aria-label={`Approval trend: ${arrowLabel}`}
-          >
-            {arrow}
-          </span>
-          <span
-            className="politics-panel__why"
-            data-testid="politics-why"
-            title={tooltipText}
-            aria-label={`Why? ${tooltipText}`}
-          >
-            Why?
-          </span>
+          <Tooltip tooltipKey="country.approval">
+            <span
+              className="politics-panel__approval-value"
+              data-testid="politics-approval-value"
+              aria-valuemin={APPROVAL_FLOOR}
+              aria-valuemax={APPROVAL_CEILING}
+              aria-valuenow={approvalDisplay}
+              role="meter"
+              tabIndex={0}
+            >
+              {approvalDisplay}
+            </span>
+          </Tooltip>
+          <Tooltip tooltipKey="APPROVAL_INERTIA_TAU">
+            <span
+              className={`politics-panel__trend-arrow politics-panel__trend-arrow--${arrowLabel}`}
+              data-testid="politics-trend-arrow"
+              data-direction={arrowLabel}
+              aria-label={`Approval trend: ${arrowLabel}`}
+              tabIndex={0}
+            >
+              {arrow}
+            </span>
+          </Tooltip>
+          <Tooltip tooltipKey="politics.approval_drivers">
+            <span
+              className="politics-panel__why"
+              data-testid="politics-why"
+              title={tooltipText}
+              aria-label={`Why? ${tooltipText}`}
+              tabIndex={0}
+            >
+              Why?
+            </span>
+          </Tooltip>
         </div>
       </section>
 
@@ -252,18 +262,21 @@ export function PoliticsPanel({ store }: PoliticsPanelProps) {
                 <span className="politics-panel__breakdown-name">
                   {formatPopName(row.pop_type)}
                 </span>
-                <span
-                  className="politics-panel__breakdown-bar-track"
-                  role="progressbar"
-                  aria-valuemin={happinessMin}
-                  aria-valuemax={happinessMax}
-                  aria-valuenow={row.contribution}
-                >
+                <Tooltip tooltipKey="politics.contribution_bar">
                   <span
-                    className="politics-panel__breakdown-bar"
-                    style={{ width: `${widthPct}%` }}
-                  />
-                </span>
+                    className="politics-panel__breakdown-bar-track"
+                    role="progressbar"
+                    aria-valuemin={happinessMin}
+                    aria-valuemax={happinessMax}
+                    aria-valuenow={row.contribution}
+                    tabIndex={0}
+                  >
+                    <span
+                      className="politics-panel__breakdown-bar"
+                      style={{ width: `${widthPct}%` }}
+                    />
+                  </span>
+                </Tooltip>
                 <span
                   className="politics-panel__breakdown-value"
                   data-testid={`approval-contrib-${row.pop_type}`}

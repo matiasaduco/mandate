@@ -23,7 +23,9 @@
 //     stock card.
 
 import { formatNumber, formatPercent, formatTitle } from '@ui/components/format'
+import { Tooltip } from '@ui/components/Tooltip'
 import { TrendSparkline } from '@ui/components/TrendSparkline'
+import type { TooltipKey } from '@ui/copy/tooltips'
 import {
   getGameStore,
   type GameStore,
@@ -47,6 +49,7 @@ function NumericCard({
   value,
   formatted,
   trendKey,
+  tooltipKey,
   store,
   extraClassName,
 }: {
@@ -55,6 +58,7 @@ function NumericCard({
   value: number
   formatted: string
   trendKey: TrendKey
+  tooltipKey: TooltipKey
   store: GameStore
   extraClassName?: string
 }) {
@@ -64,15 +68,18 @@ function NumericCard({
   // store writes.
   const trend = store((s: GameStoreState) => s.trends[trendKey])
   return (
-    <div
-      className={`overview-card overview-card--${trendKey}${extraClassName ? ` ${extraClassName}` : ''}`}
-      data-testid={testId}
-      data-value={value}
-    >
-      <div className="overview-card__label">{label}</div>
-      <div className="overview-card__value">{formatted}</div>
-      <TrendSparkline data={trend} />
-    </div>
+    <Tooltip tooltipKey={tooltipKey}>
+      <div
+        className={`overview-card overview-card--${trendKey}${extraClassName ? ` ${extraClassName}` : ''}`}
+        data-testid={testId}
+        data-value={value}
+        tabIndex={0}
+      >
+        <div className="overview-card__label">{label}</div>
+        <div className="overview-card__value">{formatted}</div>
+        <TrendSparkline data={trend} />
+      </div>
+    </Tooltip>
   )
 }
 
@@ -82,20 +89,28 @@ function TextCard({
   testId,
   primary,
   secondary,
+  tooltipKey,
 }: {
   label: string
   testId: string
   primary: string
   secondary?: string
+  tooltipKey: TooltipKey
 }) {
   return (
-    <div className={`overview-card overview-card--text overview-card--${testId}`} data-testid={testId}>
-      <div className="overview-card__label">{label}</div>
-      <div className="overview-card__value overview-card__value--text">{primary}</div>
-      {secondary !== undefined ? (
-        <div className="overview-card__secondary">{secondary}</div>
-      ) : null}
-    </div>
+    <Tooltip tooltipKey={tooltipKey}>
+      <div
+        className={`overview-card overview-card--text overview-card--${testId}`}
+        data-testid={testId}
+        tabIndex={0}
+      >
+        <div className="overview-card__label">{label}</div>
+        <div className="overview-card__value overview-card__value--text">{primary}</div>
+        {secondary !== undefined ? (
+          <div className="overview-card__secondary">{secondary}</div>
+        ) : null}
+      </div>
+    </Tooltip>
   )
 }
 
@@ -122,6 +137,7 @@ export function OverviewPanel({ store }: OverviewPanelProps) {
         value={population}
         formatted={formatNumber(population)}
         trendKey="population"
+        tooltipKey="country.population"
         store={resolved}
       />
       <NumericCard
@@ -130,6 +146,7 @@ export function OverviewPanel({ store }: OverviewPanelProps) {
         value={gdp}
         formatted={formatNumber(gdp)}
         trendKey="gdp"
+        tooltipKey="country.gdp"
         store={resolved}
       />
       <NumericCard
@@ -138,6 +155,7 @@ export function OverviewPanel({ store }: OverviewPanelProps) {
         value={treasury}
         formatted={formatNumber(treasury)}
         trendKey="treasury"
+        tooltipKey="country.treasury"
         store={resolved}
         extraClassName={treasury < 0 ? 'is-negative' : undefined}
       />
@@ -147,6 +165,7 @@ export function OverviewPanel({ store }: OverviewPanelProps) {
         value={approval}
         formatted={formatPercent(approval)}
         trendKey="approval"
+        tooltipKey="country.approval"
         store={resolved}
       />
       <NumericCard
@@ -155,18 +174,21 @@ export function OverviewPanel({ store }: OverviewPanelProps) {
         value={stability}
         formatted={formatPercent(stability)}
         trendKey="stability"
+        tooltipKey="country.stability"
         store={resolved}
       />
       <TextCard
         label="Government"
         testId="overview-government"
         primary={formatTitle(governmentType)}
+        tooltipKey="country.government"
       />
       <TextCard
         label="Head of State"
         testId="overview-head-of-state"
         primary={headOfState.name}
         secondary={headOfState.party}
+        tooltipKey="country.head_of_state"
       />
     </section>
   )

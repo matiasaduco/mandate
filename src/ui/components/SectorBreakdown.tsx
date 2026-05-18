@@ -16,6 +16,7 @@
 
 import type { Sector } from '@engine/types'
 import { formatNumber } from '@ui/components/format'
+import { Tooltip } from '@ui/components/Tooltip'
 
 export type SectorBreakdownProps = {
   sectors: Sector[]
@@ -47,34 +48,38 @@ export function SectorBreakdown({ sectors }: SectorBreakdownProps) {
             data-testid={`sector-row-${s.sector_type}`}
           >
             <span className="sector-breakdown__name">{s.sector_type}</span>
-            <div className="sector-breakdown__cell">
-              <div className="sector-breakdown__bar-track" aria-hidden="true">
-                <div
-                  className="sector-breakdown__bar sector-breakdown__bar--output"
-                  style={{ width: `${outputPct}%` }}
-                />
+            <Tooltip tooltipKey="sector.output">
+              <div className="sector-breakdown__cell" tabIndex={0}>
+                <div className="sector-breakdown__bar-track" aria-hidden="true">
+                  <div
+                    className="sector-breakdown__bar sector-breakdown__bar--output"
+                    style={{ width: `${outputPct}%` }}
+                  />
+                </div>
+                <span
+                  className="sector-breakdown__value"
+                  data-testid={`sector-output-${s.sector_type}`}
+                >
+                  {formatNumber(s.output)}
+                </span>
               </div>
-              <span
-                className="sector-breakdown__value"
-                data-testid={`sector-output-${s.sector_type}`}
-              >
-                {formatNumber(s.output)}
-              </span>
-            </div>
-            <div className="sector-breakdown__cell">
-              <div className="sector-breakdown__bar-track" aria-hidden="true">
-                <div
-                  className="sector-breakdown__bar sector-breakdown__bar--employment"
-                  style={{ width: `${employmentPct}%` }}
-                />
+            </Tooltip>
+            <Tooltip tooltipKey="sector.employment">
+              <div className="sector-breakdown__cell" tabIndex={0}>
+                <div className="sector-breakdown__bar-track" aria-hidden="true">
+                  <div
+                    className="sector-breakdown__bar sector-breakdown__bar--employment"
+                    style={{ width: `${employmentPct}%` }}
+                  />
+                </div>
+                <span
+                  className="sector-breakdown__value"
+                  data-testid={`sector-employment-${s.sector_type}`}
+                >
+                  {`${(s.employment_share * 100).toFixed(1)}%`}
+                </span>
               </div>
-              <span
-                className="sector-breakdown__value"
-                data-testid={`sector-employment-${s.sector_type}`}
-              >
-                {`${(s.employment_share * 100).toFixed(1)}%`}
-              </span>
-            </div>
+            </Tooltip>
           </div>
         )
       })}

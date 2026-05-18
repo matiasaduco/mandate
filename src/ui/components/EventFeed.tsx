@@ -11,6 +11,8 @@
 
 import type { EngineEvent } from '@engine/types'
 import { eventSeverity, formatEvent } from '@ui/components/eventCopy'
+import { Tooltip } from '@ui/components/Tooltip'
+import type { TooltipKey } from '@ui/copy/tooltips'
 import {
   getGameStore,
   type GameStore,
@@ -84,20 +86,24 @@ export function EventFeed({ store, events, limit, heading }: EventFeedProps) {
           // reference only when the underlying list grew, at which point the
           // list shifts and re-keying is correct anyway.
           const key = `${event.tick}-${event.type}-${idx}`
+          // Trigger explanation lives in tooltips.ts under `event.<Type>`.
+          const tooltipKey = `event.${event.type}` as TooltipKey
           return (
-            <li
-              key={key}
-              className={`event-feed__item event-feed__item--${severity}`}
-              data-testid="event-feed-item"
-              data-event-type={event.type}
-              data-event-tick={event.tick}
-              data-severity={severity}
-            >
-              <span className="event-feed__tick" aria-hidden="true">
-                {`t${event.tick}`}
-              </span>
-              <span className="event-feed__text">{formatEvent(event)}</span>
-            </li>
+            <Tooltip key={key} tooltipKey={tooltipKey}>
+              <li
+                className={`event-feed__item event-feed__item--${severity}`}
+                data-testid="event-feed-item"
+                data-event-type={event.type}
+                data-event-tick={event.tick}
+                data-severity={severity}
+                tabIndex={0}
+              >
+                <span className="event-feed__tick" aria-hidden="true">
+                  {`t${event.tick}`}
+                </span>
+                <span className="event-feed__text">{formatEvent(event)}</span>
+              </li>
+            </Tooltip>
           )
         })}
       </ul>

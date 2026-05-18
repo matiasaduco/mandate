@@ -27,6 +27,7 @@ import { SPEEDS } from '@engine/tunables'
 import { formatCalendar } from '@ui/components/calendar'
 import { formatNumber, formatPercent } from '@ui/components/format'
 import { SaveLoadControls } from '@ui/components/SaveLoadControls'
+import { Tooltip } from '@ui/components/Tooltip'
 import {
   getGameStore,
   type GameStore,
@@ -74,47 +75,57 @@ export function TopBar({ store }: TopBarProps) {
         </span>
       </div>
 
-      <div
-        className={`topbar__calendar${speed > 0 ? ' pulse-active' : ''}`}
-        data-testid="calendar"
-      >
-        {formatCalendar(tick)}
-      </div>
+      <Tooltip tooltipKey="TICK_LENGTH_MONTHS">
+        <div
+          className={`topbar__calendar${speed > 0 ? ' pulse-active' : ''}`}
+          data-testid="calendar"
+          tabIndex={0}
+        >
+          {formatCalendar(tick)}
+        </div>
+      </Tooltip>
 
       <div className="topbar__stats">
-        <div className="topbar__stat" data-testid="treasury">
-          <span className="topbar__stat-label">Treasury</span>
-          <span className="topbar__stat-value">{formatNumber(treasury)}</span>
-        </div>
-        <div className="topbar__stat" data-testid="approval">
-          <span className="topbar__stat-label">Approval</span>
-          <span className="topbar__stat-value">{formatPercent(approval)}</span>
-        </div>
+        <Tooltip tooltipKey="country.treasury">
+          <div className="topbar__stat" data-testid="treasury" tabIndex={0}>
+            <span className="topbar__stat-label">Treasury</span>
+            <span className="topbar__stat-value">{formatNumber(treasury)}</span>
+          </div>
+        </Tooltip>
+        <Tooltip tooltipKey="country.approval">
+          <div className="topbar__stat" data-testid="approval" tabIndex={0}>
+            <span className="topbar__stat-label">Approval</span>
+            <span className="topbar__stat-value">{formatPercent(approval)}</span>
+          </div>
+        </Tooltip>
       </div>
 
-      <div
-        className="topbar__speed"
-        role="group"
-        aria-label="Simulation speed"
-        data-testid="speed-control"
-      >
-        {SPEEDS.map((s) => {
-          const isActive = s === speed
-          const label = s === 0 ? 'Pause' : `${s}×`
-          return (
-            <button
-              key={s}
-              type="button"
-              className={`topbar__speed-btn${isActive ? ' is-active' : ''}`}
-              aria-pressed={isActive}
-              data-speed={s}
-              onClick={() => onSpeedClick(s)}
-            >
-              {label}
-            </button>
-          )
-        })}
-      </div>
+      <Tooltip tooltipKey="SPEEDS">
+        <div
+          className="topbar__speed"
+          role="group"
+          aria-label="Simulation speed"
+          data-testid="speed-control"
+          tabIndex={0}
+        >
+          {SPEEDS.map((s) => {
+            const isActive = s === speed
+            const label = s === 0 ? 'Pause' : `${s}×`
+            return (
+              <button
+                key={s}
+                type="button"
+                className={`topbar__speed-btn${isActive ? ' is-active' : ''}`}
+                aria-pressed={isActive}
+                data-speed={s}
+                onClick={() => onSpeedClick(s)}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
+      </Tooltip>
 
       {/* T-028 — Save / Load controls. Pauses the engine before each action
          so the mid-tick safety invariant is trivially satisfied. */}

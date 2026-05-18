@@ -72,3 +72,58 @@ if (typeof window !== 'undefined' && !probe(window as { localStorage?: unknown }
 if (typeof globalThis !== 'undefined' && !probe(globalThis as { localStorage?: unknown })) {
   installLocalStorage(globalThis)
 }
+
+// T-032 — ResizeObserver polyfill for Radix tooltip portal layout math.
+//
+// jsdom 29 does not implement `ResizeObserver`. Radix's `react-use-size`
+// (transitively pulled in by `@radix-ui/react-tooltip`'s arrow) calls
+// `new ResizeObserver(...)` in a layout effect, which throws a
+// `ReferenceError` and crashes the React commit phase before the test gets a
+// chance to assert anything. A minimal stub satisfies the constructor / method
+// surface — Radix never reads back any size in test paths because its layout
+// math is purely measurement-driven and jsdom always reports zero.
+class NoopResizeObserver {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+}
+
+const globalRef = globalThis as { ResizeObserver?: typeof ResizeObserver }
+if (typeof globalRef.ResizeObserver === 'undefined') {
+  globalRef.ResizeObserver = NoopResizeObserver as unknown as typeof ResizeObserver
+}
+const windowRef = (typeof window !== 'undefined' ? window : undefined) as
+  | { ResizeObserver?: typeof ResizeObserver }
+  | undefined
+if (windowRef && typeof windowRef.ResizeObserver === 'undefined') {
+  windowRef.ResizeObserver = NoopResizeObserver as unknown as typeof ResizeObserver
+}
+
+// T-032 — DOMRect polyfill placeholders. jsdom 29 lacks a usable
+// `Element.prototype.getBoundingClientRect` for elements that have not been
+// laid out. Radix tooltip positioning calls it. We replace the implementation
+// with a zero-rect shim only when the native one returns a `width: 0`
+// "empty" rect AND we are inside jsdom — production builds are untouched.
+if (typeof Element !== 'undefined') {
+  const original = Element.prototype.getBoundingClientRect
+  Element.prototype.getBoundingClientRect = function getBoundingClientRectShim() {
+    const rect = original.call(this)
+    if (rect && rect.width === 0 && rect.height === 0) {
+      // Provide a non-zero rect so Radix's collision detection has something
+      // to position against; coordinates land at (0, 0) which is fine because
+      // tests do not assert positioning.
+      return {
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: 0,
+        height: 0,
+        toJSON: () => ({}),
+      } as DOMRect
+    }
+    return rect
+  }
+}

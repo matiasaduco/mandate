@@ -14,6 +14,7 @@
 import { formatTitle } from '@ui/components/format'
 import type { PreviewResult } from '@ui/components/dryTick'
 import { bandDelta } from '@ui/components/sliderPreviewBand'
+import { Tooltip } from '@ui/components/Tooltip'
 import type { SliderId } from '@engine/types'
 
 export type SliderPreviewProps = {
@@ -52,24 +53,28 @@ export function SliderPreview({ result, sliderId }: SliderPreviewProps) {
       role="status"
       aria-live="polite"
     >
-      <div className="slider-preview__row">
-        <span className="slider-preview__label">Δ Approval</span>
-        <span
-          className={`slider-preview__value slider-preview__value--${signTone(result.dApproval)}`}
-          data-testid={`slider-preview-${sliderId}-approval`}
-        >
-          {bandDelta(result.dApproval)}
-        </span>
-      </div>
-      <div className="slider-preview__row">
-        <span className="slider-preview__label">Δ Treasury</span>
-        <span
-          className={`slider-preview__value slider-preview__value--${signTone(result.dTreasury)}`}
-          data-testid={`slider-preview-${sliderId}-treasury`}
-        >
-          {bandDelta(result.dTreasury)}
-        </span>
-      </div>
+      <Tooltip tooltipKey="slider.preview">
+        <div className="slider-preview__row" tabIndex={0}>
+          <span className="slider-preview__label">Δ Approval</span>
+          <span
+            className={`slider-preview__value slider-preview__value--${signTone(result.dApproval)}`}
+            data-testid={`slider-preview-${sliderId}-approval`}
+          >
+            {bandDelta(result.dApproval)}
+          </span>
+        </div>
+      </Tooltip>
+      <Tooltip tooltipKey="slider.preview">
+        <div className="slider-preview__row" tabIndex={0}>
+          <span className="slider-preview__label">Δ Treasury</span>
+          <span
+            className={`slider-preview__value slider-preview__value--${signTone(result.dTreasury)}`}
+            data-testid={`slider-preview-${sliderId}-treasury`}
+          >
+            {bandDelta(result.dTreasury)}
+          </span>
+        </div>
+      </Tooltip>
       {meaningfulPops.length > 0 ? (
         <ul
           className="slider-preview__pops"

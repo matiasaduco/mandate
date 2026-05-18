@@ -135,11 +135,11 @@ The dev agents do **not** have the `Agent` tool — they cannot recursively call
 ## GitHub workflow
 
 - **Repo:** [github.com/matiasaduco/mandate](https://github.com/matiasaduco/mandate).
-- **Issue ↔ ticket mapping:** GitHub issue `#N` corresponds 1-to-1 to ticket `T-00N` in `~/Documents/Tycoon/08 - Tickets/Phase 1 Tickets.md`.
+- **Issue ↔ ticket mapping:** The `#N == T-00N` alias held only through Phase 1 (issues `#1`–`#31`) because issues were filed before any PR. GitHub shares one number space between issues and PRs, so once PRs `#32`–`#58` landed, the alias broke. From Phase 1.5 onward, **the ticket id lives in the issue title** (e.g., `T-032 Tooltip system`), not in the issue number. The Phase 1.5 ticket file records the actual issue number per ticket. See vault `Decisions Log` § 2026-05-18.
 - **Setup bundle (closed):** Issues `#1`–`#5` (T-001 → T-005) shipped together in commit `437f7fa`. This was an exception — strict dependency chain with no independently-testable intermediate states. See vault `Decisions Log` § 2026-05-09.
 - **Default workflow from `#6` onward — branch-per-issue:**
-  - One branch per ticket. Branch name: `t-NNN-short-slug` (e.g., `t-006-tick-runner`).
-  - One PR per branch. PR title references the ticket id; body lists which Acceptance Criteria it satisfies and the test files that prove them. PR closes the matching issue.
+  - One branch per ticket. Branch name: `t-NNN-short-slug` (e.g., `t-006-tick-runner`, `t-032-tooltip-system`).
+  - One PR per branch. PR title references the ticket id; body lists which Acceptance Criteria it satisfies and the test files that prove them. PR closes the matching issue (use `Closes #<issue-number>`, not `Closes T-NNN`).
   - Rebase or merge to `main` is fine; keep history readable.
   - Bundling multiple tickets in one PR requires the same justification as the setup bundle (strict dependency + no independent testability) and an entry in the vault `Decisions Log`.
 

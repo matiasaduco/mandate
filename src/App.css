@@ -1112,3 +1112,62 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* --- T-032 tooltip primitive ----------------------------------------- */
+
+/* Radix tooltip content. The portal renders this fragment directly under
+ * <body>, so the styles are NOT scoped to any panel — they apply globally.
+ * Visual target: a small dark card with a title + body, max-width capped so
+ * long descriptions wrap to ~3 lines. Motion comes from the framer-motion
+ * wrapper inside <Tooltip>, this rule just controls layout / colours. */
+.tooltip {
+  z-index: 100;
+  max-width: 320px;
+  padding: 10px 12px;
+  background: #1c1f24;
+  color: #e7e9ec;
+  border: 1px solid #2c313a;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  outline: none;
+}
+
+.tooltip__title {
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.2px;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.tooltip__text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.tooltip__affects {
+  list-style: disc;
+  margin: 6px 0 0 18px;
+  padding: 0;
+  font-size: 11px;
+  color: #b9bdc4;
+}
+
+.tooltip__affects-item {
+  margin: 1px 0;
+}
+
+.tooltip__arrow {
+  fill: #1c1f24;
+}
+
+/* Trigger styling: any element wrapped by <Tooltip> gets a focus ring when
+ * keyboard-focused so the tooltip's open-on-focus is discoverable. */
+[data-tooltip-key]:focus-visible {
+  outline: 2px solid var(--accent, #4a90e2);
+  outline-offset: 2px;
+  border-radius: 4px;
+}

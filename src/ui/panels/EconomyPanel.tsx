@@ -39,6 +39,8 @@ import { GdpChart } from '@ui/components/GdpChart'
 import { SectorBreakdown } from '@ui/components/SectorBreakdown'
 import { Slider, type SliderProps } from '@ui/components/Slider'
 import { SliderPreview } from '@ui/components/SliderPreview'
+import { Tooltip } from '@ui/components/Tooltip'
+import type { TooltipKey } from '@ui/copy/tooltips'
 import { useSliderPreview } from '@ui/hooks/useSliderPreview'
 import {
   getGameStore,
@@ -130,7 +132,14 @@ type PreviewedSliderProps = {
   onCommit: (raw: number) => void
 } & Pick<
   SliderProps,
-  'id' | 'label' | 'min' | 'max' | 'value' | 'formatDisplay' | 'recentlyChanged'
+  | 'id'
+  | 'label'
+  | 'min'
+  | 'max'
+  | 'value'
+  | 'formatDisplay'
+  | 'recentlyChanged'
+  | 'tooltipKey'
 >
 
 function PreviewedSlider({
@@ -138,6 +147,9 @@ function PreviewedSlider({
   sliderId,
   toDecisionValue,
   onCommit,
+  // Pass through to Slider. Pulled out only so the prop spread below stays
+  // typed against `SliderProps`.
+  tooltipKey,
   ...sliderProps
 }: PreviewedSliderProps) {
   // Per-slider local candidate. `null` means "no drag in progress" → no
@@ -153,6 +165,7 @@ function PreviewedSlider({
   return (
     <Slider
       {...sliderProps}
+      tooltipKey={tooltipKey}
       onCommit={(v) => {
         setCandidate(null)
         onCommit(v)
@@ -209,12 +222,14 @@ export function EconomyPanel({ store }: EconomyPanelProps) {
       {/* --- Tax policy -------------------------------------------------- */}
       <section className="economy-panel__section" aria-labelledby="economy-tax-heading">
         <h3 id="economy-tax-heading">Tax policy</h3>
-        <div className="economy-panel__flow">
-          <span className="economy-panel__flow-label">Tax income (per tick)</span>
-          <span className="economy-panel__flow-value" data-testid="economy-tax-income">
-            {formatNumber(flows.tax_income)}
-          </span>
-        </div>
+        <Tooltip tooltipKey="TAX_INCIDENCE_WEIGHTS_P1">
+          <div className="economy-panel__flow" tabIndex={0}>
+            <span className="economy-panel__flow-label">Tax income (per tick)</span>
+            <span className="economy-panel__flow-value" data-testid="economy-tax-income">
+              {formatNumber(flows.tax_income)}
+            </span>
+          </div>
+        </Tooltip>
         <div className="economy-panel__sliders">
           <PreviewedSlider
             store={resolved}
@@ -228,6 +243,7 @@ export function EconomyPanel({ store }: EconomyPanelProps) {
             toDecisionValue={(v) => v}
             formatDisplay={(v) => `${v}%`}
             recentlyChanged={recentlyChanged.tax_income ?? false}
+            tooltipKey="tax.income"
           />
           <PreviewedSlider
             store={resolved}
@@ -241,6 +257,7 @@ export function EconomyPanel({ store }: EconomyPanelProps) {
             toDecisionValue={(v) => v}
             formatDisplay={(v) => `${v}%`}
             recentlyChanged={recentlyChanged.tax_corporate ?? false}
+            tooltipKey="tax.corporate"
           />
           <PreviewedSlider
             store={resolved}
@@ -254,6 +271,7 @@ export function EconomyPanel({ store }: EconomyPanelProps) {
             toDecisionValue={(v) => v}
             formatDisplay={(v) => `${v}%`}
             recentlyChanged={recentlyChanged.tax_consumption ?? false}
+            tooltipKey="tax.consumption"
           />
         </div>
       </section>
@@ -261,24 +279,29 @@ export function EconomyPanel({ store }: EconomyPanelProps) {
       {/* --- Budget ----------------------------------------------------- */}
       <section className="economy-panel__section" aria-labelledby="economy-budget-heading">
         <h3 id="economy-budget-heading">Budget</h3>
-        <div className="economy-panel__flow">
-          <span className="economy-panel__flow-label">Budget spend (per tick)</span>
-          <span className="economy-panel__flow-value" data-testid="economy-budget-spend">
-            {formatNumber(flows.budget_spend)}
-          </span>
-        </div>
-        <div className="economy-panel__flow">
-          <span className="economy-panel__flow-label">Balance (per tick)</span>
-          <span
-            className={`economy-panel__flow-value${balanceIsNegative ? ' is-negative' : ''}`}
-            data-testid="economy-balance"
-          >
-            {formatNumber(flows.balance)}
-          </span>
-        </div>
+        <Tooltip tooltipKey="country.balance">
+          <div className="economy-panel__flow" tabIndex={0}>
+            <span className="economy-panel__flow-label">Budget spend (per tick)</span>
+            <span className="economy-panel__flow-value" data-testid="economy-budget-spend">
+              {formatNumber(flows.budget_spend)}
+            </span>
+          </div>
+        </Tooltip>
+        <Tooltip tooltipKey="country.balance">
+          <div className="economy-panel__flow" tabIndex={0}>
+            <span className="economy-panel__flow-label">Balance (per tick)</span>
+            <span
+              className={`economy-panel__flow-value${balanceIsNegative ? ' is-negative' : ''}`}
+              data-testid="economy-balance"
+            >
+              {formatNumber(flows.balance)}
+            </span>
+          </div>
+        </Tooltip>
         <div className="economy-panel__sliders">
           {BUDGET_CATEGORIES.map((cat, idx) => {
             const sliderId: SliderId = `budget_${cat}`
+            const budgetTooltipKey = `budget.${cat}` as TooltipKey
             return (
               <PreviewedSlider
                 key={cat}
@@ -300,6 +323,7 @@ export function EconomyPanel({ store }: EconomyPanelProps) {
                 toDecisionValue={(v) => v / 100}
                 formatDisplay={(v) => `${v}%`}
                 recentlyChanged={recentlyChanged[sliderId] ?? false}
+                tooltipKey={budgetTooltipKey}
               />
             )
           })}
@@ -323,13 +347,23 @@ export function EconomyPanel({ store }: EconomyPanelProps) {
       {/* --- GDP -------------------------------------------------------- */}
       <section className="economy-panel__section" aria-labelledby="economy-gdp-heading">
         <h3 id="economy-gdp-heading">GDP</h3>
-        <div className="economy-panel__flow">
-          <span className="economy-panel__flow-label">Current GDP</span>
-          <span className="economy-panel__flow-value" data-testid="economy-gdp">
-            {formatNumber(gdp)}
-          </span>
-        </div>
-        <GdpChart data={gdpTrend} />
+        <Tooltip tooltipKey="country.gdp">
+          <div className="economy-panel__flow" tabIndex={0}>
+            <span className="economy-panel__flow-label">Current GDP</span>
+            <span className="economy-panel__flow-value" data-testid="economy-gdp">
+              {formatNumber(gdp)}
+            </span>
+          </div>
+        </Tooltip>
+        <Tooltip tooltipKey="TREND_HISTORY_TICKS">
+          <div
+            className="economy-panel__gdp-chart"
+            tabIndex={0}
+            data-testid="economy-gdp-chart-wrap"
+          >
+            <GdpChart data={gdpTrend} />
+          </div>
+        </Tooltip>
       </section>
 
       {/* --- Sectors ---------------------------------------------------- */}
