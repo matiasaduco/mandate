@@ -70,7 +70,7 @@ export function DecreeButton({ decreeId, cost, treasury, onIssue }: DecreeButton
   const tooltipKey = `decree.${decreeId}` as TooltipKey
 
   return (
-    <Tooltip tooltipKey={tooltipKey}>
+    <Tooltip tooltipKey={tooltipKey} motionVariant="hud">
       <button
         type="button"
         className="decree-btn"

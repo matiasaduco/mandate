@@ -9,6 +9,15 @@
 // Per the vault Player View contract (stage 7 / read-only), no engine handles
 // are touched here — everything goes through the store.
 //
+// T-034 — Treasury + approval cells gain pulsing `is-warning` / `is-critical`
+// classes when they cross the documented thresholds. Pure CSS animation
+// reaction to snapshot state — no new engine event, no new subscription. See
+// `App.css` for the keyframes.
+//   - treasury <= 0                                            → is-critical
+//   - approval <= APPROVAL_WARN_THRESHOLDS[2] (15, crisis)     → is-critical
+//   - approval <= APPROVAL_WARN_THRESHOLDS[1] (20)             → is-warning
+//   - approval <= APPROVAL_WARN_THRESHOLDS[0] (30, subtle)     → is-warning
+//
 // Component-level concerns:
 //   - Narrow selectors so each field's re-render is isolated (T-019 AC#4).
 //   - The store-prop pattern (test injection vs app singleton): tests pass
@@ -23,7 +32,7 @@
 //   year offset = floor(tick / 12)
 //   Format: "<MonShort> <Year> — Tick <tick> / Year <yearOffset>"
 
-import { SPEEDS } from '@engine/tunables'
+import { APPROVAL_WARN_THRESHOLDS, SPEEDS } from '@engine/tunables'
 import { formatCalendar } from '@ui/components/calendar'
 import { formatNumber, formatPercent } from '@ui/components/format'
 import { SaveLoadControls } from '@ui/components/SaveLoadControls'
@@ -34,6 +43,27 @@ import {
   type GameStoreState,
 } from '@ui/stores/gameStore'
 import { setSpeedSafe } from '@ui/hooks/useTickLoop'
+
+/**
+ * Pulse-severity classifier for the approval cell. Reads APPROVAL_WARN_THRESHOLDS
+ * verbatim from the engine tunables — no inlined `30 / 20 / 15` literals.
+ *
+ * Returns:
+ *   - `'is-critical'` when approval has fallen at or below the crisis
+ *     threshold (the third entry, currently 15) — same threshold the engine
+ *     uses to start the approval-crisis loss clock.
+ *   - `'is-warning'` for the two higher tiers (currently 20 and 30).
+ *   - `null` otherwise (no pulse class added).
+ */
+function approvalPulseClass(
+  approval: number,
+): 'is-critical' | 'is-warning' | null {
+  const [warn1, warn2, crisis] = APPROVAL_WARN_THRESHOLDS
+  if (approval <= crisis) return 'is-critical'
+  if (approval <= warn2) return 'is-warning'
+  if (approval <= warn1) return 'is-warning'
+  return null
+}
 
 export type TopBarProps = {
   /**
@@ -75,7 +105,7 @@ export function TopBar({ store }: TopBarProps) {
         </span>
       </div>
 
-      <Tooltip tooltipKey="TICK_LENGTH_MONTHS">
+      <Tooltip tooltipKey="TICK_LENGTH_MONTHS" motionVariant="hud">
         <div
           className={`topbar__calendar${speed > 0 ? ' pulse-active' : ''}`}
           data-testid="calendar"
@@ -86,21 +116,37 @@ export function TopBar({ store }: TopBarProps) {
       </Tooltip>
 
       <div className="topbar__stats">
-        <Tooltip tooltipKey="country.treasury">
-          <div className="topbar__stat" data-testid="treasury" tabIndex={0}>
+        <Tooltip tooltipKey="country.treasury" motionVariant="hud">
+          <div
+            className={`topbar__stat topbar__stat--treasury${
+              treasury <= 0 ? ' is-critical' : ''
+            }`}
+            data-testid="treasury"
+            data-pulse={treasury <= 0 ? 'critical' : 'none'}
+            tabIndex={0}
+          >
             <span className="topbar__stat-label">Treasury</span>
             <span className="topbar__stat-value">{formatNumber(treasury)}</span>
           </div>
         </Tooltip>
-        <Tooltip tooltipKey="country.approval">
-          <div className="topbar__stat" data-testid="approval" tabIndex={0}>
+        <Tooltip tooltipKey="country.approval" motionVariant="hud">
+          <div
+            className={`topbar__stat topbar__stat--approval${
+              approvalPulseClass(approval) !== null
+                ? ` ${approvalPulseClass(approval)}`
+                : ''
+            }`}
+            data-testid="approval"
+            data-pulse={approvalPulseClass(approval) ?? 'none'}
+            tabIndex={0}
+          >
             <span className="topbar__stat-label">Approval</span>
             <span className="topbar__stat-value">{formatPercent(approval)}</span>
           </div>
         </Tooltip>
       </div>
 
-      <Tooltip tooltipKey="SPEEDS">
+      <Tooltip tooltipKey="SPEEDS" motionVariant="hud">
         <div
           className="topbar__speed"
           role="group"

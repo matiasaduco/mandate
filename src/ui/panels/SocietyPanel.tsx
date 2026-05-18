@@ -18,6 +18,7 @@
 // Priority tooltip text is computed by `priorityTooltip()` in
 // `societyPriorityTooltip.ts`. See that file for the per-priority mapping.
 
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useMemo, useState } from 'react'
 
 import type { POP } from '@engine/types'
@@ -35,6 +36,7 @@ import {
   type GameStore,
   type GameStoreState,
 } from '@ui/stores/gameStore'
+import { MOTION_KPI_TWEEN_MS, SPRING_KPI } from '@ui/theme/tokens'
 
 export type SocietyPanelProps = {
   /**
@@ -97,6 +99,19 @@ export function SocietyPanel({ store }: SocietyPanelProps) {
 
   const [happinessMin, happinessMax] = HAPPINESS_RANGE
   const happinessRangeWidth = happinessMax - happinessMin
+
+  // T-034 — Per-row happiness value gets the same KPI spring-tween pattern as
+  // the OverviewPanel cards. Reduced-motion bypasses the spring so the rendered
+  // text is a plain `<span>` (no AnimatePresence remount on tick).
+  const reducedMotion = useReducedMotion()
+  const happinessTransition =
+    reducedMotion === true
+      ? { duration: 0 }
+      : {
+          type: 'spring' as const,
+          ...SPRING_KPI,
+          duration: MOTION_KPI_TWEEN_MS / 1000,
+        }
 
   return (
     <section
@@ -203,8 +218,23 @@ export function SocietyPanel({ store }: SocietyPanelProps) {
                   <span
                     className="society-panel__happiness-value"
                     data-testid={`society-happiness-value-${pop.pop_type}`}
+                    data-kpi-tween={reducedMotion === true ? 'instant' : 'spring'}
                   >
-                    {Math.round(happinessClamped)}
+                    {reducedMotion === true ? (
+                      <span>{Math.round(happinessClamped)}</span>
+                    ) : (
+                      <AnimatePresence mode="popLayout" initial={false}>
+                        <motion.span
+                          key={Math.round(happinessClamped)}
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={happinessTransition}
+                        >
+                          {Math.round(happinessClamped)}
+                        </motion.span>
+                      </AnimatePresence>
+                    )}
                   </span>
                 </td>
                 <td className="society-panel__priorities">

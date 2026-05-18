@@ -137,7 +137,7 @@ export function Slider({
       data-testid={`slider-${id}`}
     >
       {tooltipKey !== undefined ? (
-        <Tooltip tooltipKey={tooltipKey}>
+        <Tooltip tooltipKey={tooltipKey} motionVariant="hud">
           <span className="slider__label" tabIndex={0}>
             {label}
           </span>

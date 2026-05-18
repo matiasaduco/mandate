@@ -4,6 +4,11 @@
 //   - the postmortem screen as a full takeover when `state.game_over === true`
 //     (TopBar stays visible above it)
 //
+// T-034 — Replaces the static `.app__main-panels` flex stack with the
+// `<PanelLayer>` floating-card layer. The four panels are now draggable +
+// resizable cards anchored to the surface; layout persists to localStorage
+// under `mandate.layout.v1` (independent of T-028's save format).
+//
 // The store is the singleton — `getGameStore()` returns the same instance for
 // every component on the page. Restart works by tearing down that singleton
 // (`resetGameStoreSingleton()` inside `<PostmortemScreen />`) and bumping
@@ -15,13 +20,10 @@ import { useState } from 'react'
 import './App.css'
 
 import { EventFeed } from '@ui/components/EventFeed'
+import { PanelLayer } from '@ui/components/PanelLayer'
 import { TopBar } from '@ui/components/TopBar'
 import { WarningBanner } from '@ui/components/WarningBanner'
 import { useTickLoop } from '@ui/hooks/useTickLoop'
-import { EconomyPanel } from '@ui/panels/EconomyPanel'
-import { OverviewPanel } from '@ui/panels/OverviewPanel'
-import { PoliticsPanel } from '@ui/panels/PoliticsPanel'
-import { SocietyPanel } from '@ui/panels/SocietyPanel'
 import { PostmortemScreen } from '@ui/screens/PostmortemScreen'
 import { getGameStore } from '@ui/stores/gameStore'
 
@@ -53,12 +55,16 @@ function AppContent({ onRestart }: AppContentProps) {
       ) : (
         <main className="app__main">
           <WarningBanner />
+          {/* T-034: the panel grid becomes a floating layer (PanelLayer) and
+              the event feed continues to live in a sticky sidebar slot. The
+              `app__main-grid` keeps the two-column layout; only the left
+              column markup changed. */}
           <div className="app__main-grid">
-            <div className="app__main-panels">
-              <OverviewPanel />
-              <EconomyPanel />
-              <SocietyPanel />
-              <PoliticsPanel />
+            <div className="app__panels-host" data-testid="panels-host">
+              {/* T-035 reserves the top-left zone for the PlayerCountryCard.
+                  PanelLayer's default positions already steer clear of it; we
+                  don't mount the card here — that's T-035 scope. */}
+              <PanelLayer />
             </div>
             <aside className="app__sidebar">
               <EventFeed />

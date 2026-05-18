@@ -25,6 +25,7 @@
 //   - `flows.balance` paints red when negative (matches OverviewPanel's
 //     negative-treasury treatment).
 
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useMemo, useState } from 'react'
 
 import type { EngineEvent, SliderId } from '@engine/types'
@@ -47,6 +48,7 @@ import {
   type GameStore,
   type GameStoreState,
 } from '@ui/stores/gameStore'
+import { MOTION_KPI_TWEEN_MS, SPRING_KPI } from '@ui/theme/tokens'
 
 export type EconomyPanelProps = {
   /**
@@ -71,6 +73,68 @@ const BUDGET_SHARE_DISPLAY_TOLERANCE = 1.0
 const RECENTLY_CHANGED_TICK_WINDOW = 2
 
 const BUDGET_CATEGORIES = BUDGET_CATEGORIES_P1 as readonly (typeof BUDGET_CATEGORIES_P1)[number][]
+
+/**
+ * T-034 — Animated KPI value used by the panel's flow headlines. Mirrors the
+ * `NumericCard` pattern in OverviewPanel: a spring-tweened `motion.span` keyed
+ * by the displayed formatted text, wrapped in AnimatePresence so the in/out
+ * tween fires every time the rendered value changes. Reduced-motion bypasses
+ * both AnimatePresence and the spring so the DOM stays static and the test
+ * harness can assert the absence of motion side-effects.
+ *
+ * Kept private to this module: the politics / society panels use the same
+ * pattern but with their own colocated definitions so each panel owns the
+ * specifics (className, test hooks) without indirection.
+ */
+function KpiValue({
+  formatted,
+  className,
+  testId,
+}: {
+  formatted: string
+  className?: string
+  testId?: string
+}) {
+  const reducedMotion = useReducedMotion()
+  const transition =
+    reducedMotion === true
+      ? { duration: 0 }
+      : {
+          type: 'spring' as const,
+          ...SPRING_KPI,
+          duration: MOTION_KPI_TWEEN_MS / 1000,
+        }
+  if (reducedMotion === true) {
+    return (
+      <span
+        className={className}
+        data-testid={testId}
+        data-kpi-tween="instant"
+      >
+        {formatted}
+      </span>
+    )
+  }
+  return (
+    <span
+      className={className}
+      data-testid={testId}
+      data-kpi-tween="spring"
+    >
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span
+          key={formatted}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={transition}
+        >
+          {formatted}
+        </motion.span>
+      </AnimatePresence>
+    </span>
+  )
+}
 
 /**
  * Build a `Record<SliderId, boolean>` indicating, per slider, whether the most
@@ -225,9 +289,11 @@ export function EconomyPanel({ store }: EconomyPanelProps) {
         <Tooltip tooltipKey="TAX_INCIDENCE_WEIGHTS_P1">
           <div className="economy-panel__flow" tabIndex={0}>
             <span className="economy-panel__flow-label">Tax income (per tick)</span>
-            <span className="economy-panel__flow-value" data-testid="economy-tax-income">
-              {formatNumber(flows.tax_income)}
-            </span>
+            <KpiValue
+              formatted={formatNumber(flows.tax_income)}
+              className="economy-panel__flow-value"
+              testId="economy-tax-income"
+            />
           </div>
         </Tooltip>
         <div className="economy-panel__sliders">
@@ -282,20 +348,21 @@ export function EconomyPanel({ store }: EconomyPanelProps) {
         <Tooltip tooltipKey="country.balance">
           <div className="economy-panel__flow" tabIndex={0}>
             <span className="economy-panel__flow-label">Budget spend (per tick)</span>
-            <span className="economy-panel__flow-value" data-testid="economy-budget-spend">
-              {formatNumber(flows.budget_spend)}
-            </span>
+            <KpiValue
+              formatted={formatNumber(flows.budget_spend)}
+              className="economy-panel__flow-value"
+              testId="economy-budget-spend"
+            />
           </div>
         </Tooltip>
         <Tooltip tooltipKey="country.balance">
           <div className="economy-panel__flow" tabIndex={0}>
             <span className="economy-panel__flow-label">Balance (per tick)</span>
-            <span
+            <KpiValue
+              formatted={formatNumber(flows.balance)}
               className={`economy-panel__flow-value${balanceIsNegative ? ' is-negative' : ''}`}
-              data-testid="economy-balance"
-            >
-              {formatNumber(flows.balance)}
-            </span>
+              testId="economy-balance"
+            />
           </div>
         </Tooltip>
         <div className="economy-panel__sliders">
@@ -350,9 +417,11 @@ export function EconomyPanel({ store }: EconomyPanelProps) {
         <Tooltip tooltipKey="country.gdp">
           <div className="economy-panel__flow" tabIndex={0}>
             <span className="economy-panel__flow-label">Current GDP</span>
-            <span className="economy-panel__flow-value" data-testid="economy-gdp">
-              {formatNumber(gdp)}
-            </span>
+            <KpiValue
+              formatted={formatNumber(gdp)}
+              className="economy-panel__flow-value"
+              testId="economy-gdp"
+            />
           </div>
         </Tooltip>
         <Tooltip tooltipKey="TREND_HISTORY_TICKS">
