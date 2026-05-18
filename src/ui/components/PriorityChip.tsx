@@ -1,17 +1,21 @@
 // T-024 — Small chip rendering a single POP priority with a tooltip.
 //
-// The tooltip text is computed by the parent panel (via `priorityTooltip` in
-// `SocietyPanel.tsx`) so this component stays presentational — it only knows
-// how to render the chip and surface the tooltip text via the native `title`
-// attribute. Native `title=""` is intentional for P1: it covers screen reader
-// announcement (RTL can assert via `getAttribute('title')`), needs zero
-// runtime, and ships an accessible name without a custom popover infra.
-// T-027 (slider preview) is the natural place to introduce a richer tooltip
-// system if/when one is needed.
+// The per-priority text is computed by the parent panel (via `priorityTooltip`
+// in `SocietyPanel.tsx`) and surfaced via the project-wide Radix Tooltip
+// primitive (T-032). The Radix surface ships canonical hover-and-focus
+// behaviour plus `aria-describedby` wiring; the per-priority text itself is
+// still computed in the parent because it is a derived per-POP / per-budget
+// readout, not a static copy entry.
+//
+// We use the project Tooltip primitive in a "free body" form via the
+// `priority.label` canonical entry — the per-priority dynamic text is appended
+// to the aria-label so screen readers still announce the dynamic context.
 //
 // The display name capitalizes words after splitting on `_` (e.g.
 // `low_income_tax` → "Low Income Tax"). The shared `formatTitle` helper only
 // capitalizes the first character, so we use a small local helper instead.
+
+import { Tooltip } from '@ui/components/Tooltip'
 
 export type PriorityChipProps = {
   /** Raw priority key from `POP.priorities` (e.g. `jobs`, `low_income_tax`). */
@@ -35,17 +39,25 @@ function formatPriorityLabel(priority: string): string {
 }
 
 export function PriorityChip({ priority, tooltip }: PriorityChipProps) {
+  // The Radix wrapper surfaces the canonical `pop.priorities` body from
+  // `tooltips.ts` (T-032 AC #2 — static copy lives in tooltips.ts, not the
+  // component). The per-priority dynamic readout (e.g. "Health budget: 22%")
+  // is derived per-POP state and is NOT canonical static copy, so it stays
+  // attached to the chip itself via `title` + `aria-label` for screen readers
+  // and the legacy T-024 AC#4 contract. The two surfaces are complementary:
+  //   - Radix tooltip → static concept explanation
+  //   - chip title/aria-label → live per-POP readout
   return (
-    <span
-      className="priority-chip"
-      title={tooltip}
-      // Mirror `title` into `aria-label` so RTL queries that prefer accessible
-      // name + a11y tools both see the tooltip text. Useful since `title` is
-      // not always exposed as an accessible name by every AT.
-      aria-label={`${formatPriorityLabel(priority)}: ${tooltip}`}
-      data-testid={`priority-${priority}`}
-    >
-      {formatPriorityLabel(priority)}
-    </span>
+    <Tooltip tooltipKey="pop.priorities">
+      <span
+        className="priority-chip"
+        tabIndex={0}
+        title={tooltip}
+        aria-label={`${formatPriorityLabel(priority)}: ${tooltip}`}
+        data-testid={`priority-${priority}`}
+      >
+        {formatPriorityLabel(priority)}
+      </span>
+    </Tooltip>
   )
 }

@@ -21,6 +21,8 @@
 
 import type { DecreeId } from '@engine/types'
 import { formatNumber, formatTitle } from '@ui/components/format'
+import { Tooltip } from '@ui/components/Tooltip'
+import type { TooltipKey } from '@ui/copy/tooltips'
 
 export type DecreeButtonProps = {
   /** Catalog id (e.g. `industrial_subsidy`). Used for the test hook + label. */
@@ -62,18 +64,25 @@ export function DecreeButton({ decreeId, cost, treasury, onIssue }: DecreeButton
     onIssue(decreeId)
   }
 
+  // Tooltip key mirrors the decree id under the `decree.*` namespace in
+  // tooltips.ts. The static map keeps the cost/effect/duration copy in one
+  // place per the AC #2 "no inline literal duplicates canonical copy" rule.
+  const tooltipKey = `decree.${decreeId}` as TooltipKey
+
   return (
-    <button
-      type="button"
-      className="decree-btn"
-      data-testid={`decree-btn-${decreeId}`}
-      onClick={handleClick}
-      disabled={disabled}
-    >
-      <span className="decree-btn__label">{label}</span>
-      <span className="decree-btn__cost" data-testid={`decree-btn-${decreeId}-cost`}>
-        {costDisplay}
-      </span>
-    </button>
+    <Tooltip tooltipKey={tooltipKey}>
+      <button
+        type="button"
+        className="decree-btn"
+        data-testid={`decree-btn-${decreeId}`}
+        onClick={handleClick}
+        disabled={disabled}
+      >
+        <span className="decree-btn__label">{label}</span>
+        <span className="decree-btn__cost" data-testid={`decree-btn-${decreeId}-cost`}>
+          {costDisplay}
+        </span>
+      </button>
+    </Tooltip>
   )
 }

@@ -25,6 +25,7 @@ import { HAPPINESS_RANGE } from '@engine/tunables'
 import { formatNumber, formatTitle } from '@ui/components/format'
 import { IdeologyDot } from '@ui/components/IdeologyDot'
 import { PriorityChip } from '@ui/components/PriorityChip'
+import { Tooltip } from '@ui/components/Tooltip'
 import {
   priorityTooltip,
   type PriorityTooltipContext,
@@ -183,19 +184,22 @@ export function SocietyPanel({ store }: SocietyPanelProps) {
                   </div>
                 </td>
                 <td className="society-panel__happiness">
-                  <div
-                    className="society-panel__happiness-bar-track"
-                    role="progressbar"
-                    aria-valuemin={happinessMin}
-                    aria-valuemax={happinessMax}
-                    aria-valuenow={happinessClamped}
-                    data-testid={`society-happiness-${pop.pop_type}`}
-                  >
+                  <Tooltip tooltipKey="pop.happiness">
                     <div
-                      className="society-panel__happiness-bar"
-                      style={{ width: `${happinessPct}%` }}
-                    />
-                  </div>
+                      className="society-panel__happiness-bar-track"
+                      role="progressbar"
+                      aria-valuemin={happinessMin}
+                      aria-valuemax={happinessMax}
+                      aria-valuenow={happinessClamped}
+                      data-testid={`society-happiness-${pop.pop_type}`}
+                      tabIndex={0}
+                    >
+                      <div
+                        className="society-panel__happiness-bar"
+                        style={{ width: `${happinessPct}%` }}
+                      />
+                    </div>
+                  </Tooltip>
                   <span
                     className="society-panel__happiness-value"
                     data-testid={`society-happiness-value-${pop.pop_type}`}
@@ -216,10 +220,16 @@ export function SocietyPanel({ store }: SocietyPanelProps) {
                   className="society-panel__employment"
                   data-testid={`society-employment-${pop.pop_type}`}
                 >
-                  {`${employmentPct}%`}
+                  <Tooltip tooltipKey="pop.employment_rate">
+                    <span tabIndex={0}>{`${employmentPct}%`}</span>
+                  </Tooltip>
                 </td>
                 <td className="society-panel__ideology">
-                  <IdeologyDot ideology={pop.ideology} testIdSuffix={pop.pop_type} />
+                  <Tooltip tooltipKey="pop.ideology">
+                    <span tabIndex={0}>
+                      <IdeologyDot ideology={pop.ideology} testIdSuffix={pop.pop_type} />
+                    </span>
+                  </Tooltip>
                 </td>
               </tr>
             )

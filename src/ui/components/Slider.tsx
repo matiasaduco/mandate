@@ -24,6 +24,9 @@
 
 import { useState, type ReactNode } from 'react'
 
+import { Tooltip } from '@ui/components/Tooltip'
+import type { TooltipKey } from '@ui/copy/tooltips'
+
 export type SliderProps = {
   /** DOM id for the input — also the test hook. */
   id: string
@@ -65,6 +68,13 @@ export type SliderProps = {
    * allowed — Slider does NOT inspect this content.
    */
   preview?: ReactNode
+  /**
+   * T-032 — Optional tooltip copy key. When set, wraps the slider's label
+   * region in a Radix-backed Tooltip whose body is sourced from
+   * `src/ui/copy/tooltips.ts`. The trigger is a focusable span containing the
+   * label text so the tooltip opens on hover OR keyboard focus.
+   */
+  tooltipKey?: TooltipKey
 }
 
 export function Slider({
@@ -80,6 +90,7 @@ export function Slider({
   ariaLabel,
   onCandidateChange,
   preview,
+  tooltipKey,
 }: SliderProps) {
   // Local thumb position + last-committed baseline + last-seen prop value all
   // live in a single state object. This is the React 19 idiom for "reset
@@ -125,7 +136,15 @@ export function Slider({
       className={`slider${recentlyChanged ? ' is-recently-changed' : ''}`}
       data-testid={`slider-${id}`}
     >
-      <span className="slider__label">{label}</span>
+      {tooltipKey !== undefined ? (
+        <Tooltip tooltipKey={tooltipKey}>
+          <span className="slider__label" tabIndex={0}>
+            {label}
+          </span>
+        </Tooltip>
+      ) : (
+        <span className="slider__label">{label}</span>
+      )}
       <input
         id={id}
         type="range"
