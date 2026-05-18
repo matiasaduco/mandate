@@ -10,8 +10,7 @@
 //   - the `subscribeLayoutReset` listener that snaps everything back to
 //     defaults when `resetPanelLayout()` fires (from the keyboard shortcut OR
 //     T-037's settings button),
-//   - the reset-layout keyboard shortcut (Cmd/Ctrl + Shift + L),
-//   - the panel mount stagger-fade animation.
+//   - the reset-layout keyboard shortcut (Cmd/Ctrl + Shift + L).
 //
 // Composition:
 //   <PanelLayer>
@@ -21,13 +20,18 @@
 //     <PanelShell id="politics">    <PoliticsPanel />  </PanelShell>
 //   </PanelLayer>
 //
-// Reduced-motion: each panel's mount transition uses framer-motion's
-// `useReducedMotion()` hook indirectly via the `transition` field, which
-// framer-motion clamps to instant when the user's `prefers-reduced-motion`
-// media query matches. The test `reducedMotion.spec.tsx` verifies the
-// integration.
+// PanelShell is rendered as a DIRECT child of `.panel-layer` (no intermediate
+// wrapper element). This is load-bearing: react-rnd's `bounds="parent"`
+// resolves to the DOM `parentElement` via `getBoundingClientRect()`, and any
+// wrapper with `display: contents` returns a zero-rect which clamps every
+// drag to (0,0). Mount fade-in is a pure CSS animation on `.panel-shell`
+// (App.css) so it doesn't need to live in the DOM tree above the Rnd.
+//
+// Reduced-motion for the mount animation is handled by App.css's
+// `@media (prefers-reduced-motion: reduce)` rule. The per-panel motion-aware
+// surfaces (KPI tweens, event-feed slide-in) still use framer-motion's
+// `useReducedMotion()` directly inside their respective components.
 
-import { motion, useReducedMotion } from 'framer-motion'
 import { useCallback, useEffect, useState } from 'react'
 
 import { EconomyPanel } from '@ui/panels/EconomyPanel'
@@ -45,12 +49,7 @@ import {
   type PanelId,
   type PanelLayout,
 } from '@ui/theme/layout'
-import {
-  EASE_OUT_CUBIC,
-  MOTION_PANEL_MOUNT_MS,
-  MOTION_PANEL_STAGGER_MS,
-  RESET_LAYOUT_KEYBIND,
-} from '@ui/theme/tokens'
+import { RESET_LAYOUT_KEYBIND } from '@ui/theme/tokens'
 
 /**
  * Compare a keyboard event against the named keybinding spec. `metaKey ||
@@ -83,8 +82,6 @@ export function PanelLayer() {
   // Synchronous load — `loadLayout()` falls back to token defaults on any
   // parse / version / missing-key issue.
   const [layout, setLayout] = useState<LayoutState>(() => loadLayout())
-
-  const reducedMotion = useReducedMotion()
 
   // Persist layout updates. The handler is memoized so PanelShell sees a
   // stable callback reference (it doesn't matter functionally — PanelShell is
@@ -129,22 +126,6 @@ export function PanelLayer() {
     }
   }, [])
 
-  // Per-panel mount animation. Stagger via `delay = index * STAGGER_MS`. When
-  // `reducedMotion` is true (matched media query), framer-motion treats the
-  // transition as instant — we additionally zero the `duration` and `delay`
-  // explicitly so the test can assert reduced-motion behaviour by inspecting
-  // the transition object directly.
-  const mountTransition = (index: number) => {
-    if (reducedMotion === true) {
-      return { duration: 0, delay: 0 }
-    }
-    return {
-      duration: MOTION_PANEL_MOUNT_MS / 1000,
-      delay: (index * MOTION_PANEL_STAGGER_MS) / 1000,
-      ease: EASE_OUT_CUBIC,
-    }
-  }
-
   // Panel render order: matches `PANEL_IDS` (stable + alphabetic-ish). Each
   // entry maps to a panel component + display title for the drag handle.
   const PANELS: ReadonlyArray<{
@@ -161,26 +142,16 @@ export function PanelLayer() {
   return (
     <div className="panel-layer" data-testid="panel-layer">
       {PANELS.map(({ id, title, Body }, idx) => (
-        <motion.div
+        <PanelShell
           key={id}
-          // `position: absolute` on the wrapper keeps the layer's natural flow
-          // intact while still letting framer-motion own the mount transform.
-          // The Rnd inside positions itself absolutely as well — they nest.
-          initial={reducedMotion === true ? false : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={mountTransition(idx)}
-          className="panel-layer__entry"
-          data-testid={`panel-layer-entry-${id}`}
+          panelId={id}
+          title={title}
+          layout={layout.panels[id]}
+          onLayoutChange={handleLayoutChange}
+          mountIndex={idx}
         >
-          <PanelShell
-            panelId={id}
-            title={title}
-            layout={layout.panels[id]}
-            onLayoutChange={handleLayoutChange}
-          >
-            <Body />
-          </PanelShell>
-        </motion.div>
+          <Body />
+        </PanelShell>
       ))}
     </div>
   )

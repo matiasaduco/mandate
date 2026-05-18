@@ -40,6 +40,13 @@ export type PanelShellProps = {
   layout: PanelLayout
   /** Called once on drag stop with the new x/y. */
   onLayoutChange: (id: PanelId, next: PanelLayout) => void
+  /**
+   * Index of this panel in the layer's render order. Used only as a CSS
+   * variable (`--mount-index`) so the cold-load fade-in can stagger via
+   * `animation-delay: calc(var(--mount-index) * <stagger>)` in App.css. The
+   * stagger itself is a pure CSS animation — no framer-motion involvement.
+   */
+  mountIndex?: number
   /** Panel body (the actual panel component). */
   children: ReactNode
 }
@@ -60,6 +67,7 @@ export function PanelShell({
   title,
   layout,
   onLayoutChange,
+  mountIndex,
   children,
 }: PanelShellProps) {
   // Rnd's drag handler reports the absolute coordinates at drag-stop. We
@@ -127,6 +135,22 @@ export function PanelShell({
         topLeft: false,
       }}
       className="panel-shell"
+      // `display: flex` is set inline because react-rnd merges the consumer
+      // `style` prop INTO its computed style — the className-applied
+      // `display: flex` from .panel-shell can lose to re-resizable's defaults
+      // depending on layout context. Setting it inline makes the column flex
+      // unambiguous so `.panel-shell__body` (flex: 1 1 auto; overflow: auto)
+      // gets a bounded height and actually scrolls when content overflows.
+      //
+      // `--mount-index` is read by the .panel-shell CSS animation-delay so
+      // the cold-load stagger is purely declarative.
+      style={
+        {
+          display: 'flex',
+          flexDirection: 'column',
+          '--mount-index': mountIndex ?? 0,
+        } as React.CSSProperties
+      }
       data-testid={`panel-shell-${panelId}`}
     >
       <div

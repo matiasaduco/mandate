@@ -1259,13 +1259,27 @@
 .panel-layer {
   position: relative;
   width: 100%;
+  /* Anchor that react-rnd's `bounds="parent"` measures against. Explicit
+   * height (not `100%`, which collapses to `auto` when the parent has
+   * `min-height` only) so the bounds rectangle has real width × height and
+   * panels can drag throughout the panels-host area without being clamped
+   * to (0,0) when the document layout context confuses re-resizable. */
   height: 100%;
-  min-height: inherit;
+  min-height: 920px;
 }
 
-.panel-layer__entry {
-  /* Each entry is a positioning context wrapper; the Rnd inside owns layout. */
-  display: contents;
+/* The mount-fade plays once on cold load. Animating ONLY opacity is
+ * deliberate: re-resizable owns the inline `transform` on the panel-shell
+ * for positioning, and any animation on `transform` would fight that. The
+ * stagger comes from `--mount-index` (set inline on the Rnd outer by
+ * PanelShell.tsx). */
+@keyframes panel-mount-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .panel-shell {
@@ -1273,9 +1287,13 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 1px 0 var(--border), 0 8px 24px rgba(0, 0, 0, 0.06);
+  /* `display: flex` is also set inline by PanelShell.tsx as a defensive
+   * override; keep it in the className too so the static cascade matches. */
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  animation: panel-mount-fade-in 220ms ease-out backwards;
+  animation-delay: calc(var(--mount-index, 0) * 60ms);
 }
 
 .panel-shell__handle {
@@ -1371,5 +1389,8 @@
   .panel-shell__handle,
   .topbar__stat {
     transition: none;
+  }
+  .panel-shell {
+    animation: none;
   }
 }
