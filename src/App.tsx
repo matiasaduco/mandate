@@ -21,6 +21,7 @@ import './App.css'
 
 import { EventFeed } from '@ui/components/EventFeed'
 import { PanelLayer } from '@ui/components/PanelLayer'
+import { PlayerCountryCard } from '@ui/components/PlayerCountryCard'
 import { TopBar } from '@ui/components/TopBar'
 import { WarningBanner } from '@ui/components/WarningBanner'
 import { useTickLoop } from '@ui/hooks/useTickLoop'
@@ -47,6 +48,15 @@ function AppContent({ onRestart }: AppContentProps) {
   // only on the transition, not on every snapshot update.
   const gameOver = store((s) => s.snapshot.game_over)
 
+  // T-035 — Narrow selectors for the PlayerCountryCard. Re-renders fire only
+  // when these specific slices change. The card itself is dumb: receives a
+  // Country + trends + active_decrees and renders. Phase 3 will pull the same
+  // three slices from a country index keyed by id.
+  const country = store((s) => s.snapshot.country)
+  const activeDecrees = store((s) => s.snapshot.active_decrees)
+  const approvalTrend = store((s) => s.trends.approval)
+  const treasuryTrend = store((s) => s.trends.treasury)
+
   return (
     <>
       <TopBar />
@@ -61,9 +71,15 @@ function AppContent({ onRestart }: AppContentProps) {
               column markup changed. */}
           <div className="app__main-grid">
             <div className="app__panels-host" data-testid="panels-host">
-              {/* T-035 reserves the top-left zone for the PlayerCountryCard.
-                  PanelLayer's default positions already steer clear of it; we
-                  don't mount the card here — that's T-035 scope. */}
+              {/* T-035 — PlayerCountryCard pinned to PLAYER_CARD_ZONE inside
+                  the panels-host. It is part of the HUD layer (above
+                  PanelLayer in z-order); the panel positions already steer
+                  clear of the zone so a cold load has no overlap. */}
+              <PlayerCountryCard
+                country={country}
+                trends={{ approval: approvalTrend, treasury: treasuryTrend }}
+                activeDecrees={activeDecrees}
+              />
               <PanelLayer />
             </div>
             <aside className="app__sidebar">

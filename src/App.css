@@ -1394,3 +1394,185 @@
     animation: none;
   }
 }
+
+/* --- T-035 PlayerCountryCard -------------------------------------------
+ *
+ * Pinned to PLAYER_CARD_ZONE = { x: 16, y: 16, width: 280, height: 360 }.
+ * Sits inside `.app__panels-host` (which is `position: relative`) so the
+ * absolute positioning here resolves against that surface, not the viewport.
+ * Sits ABOVE the panel layer (z-index) so the player can't drag a panel on
+ * top of it.
+ *
+ * Sizes follow the visual sketch in the brief — top banner stripe, identity
+ * block, leader block, two compact sparklines, ideology summary, status
+ * chip row. Each section uses a 1-row flex line, and the outer container
+ * uses `flex-direction: column` with a small gap.
+ */
+.player-country-card {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 280px;
+  height: 360px;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 1px 0 var(--border), 0 8px 24px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  /* Sit above the floating panels so a dragged panel never occludes the
+   * card; the default panel positions already steer clear of the zone, so
+   * this only matters if a player drags a panel into the top-left corner. */
+  z-index: 5;
+}
+
+.player-country-card__banner {
+  height: 28px;
+  width: 100%;
+  /* The colour comes from inline style (driven by country.banner_color) so
+   * Phase 3 can paint many of these without a stylesheet round-trip. */
+  cursor: help;
+}
+
+.player-country-card__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px 6px;
+}
+
+.player-country-card__name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-h);
+  line-height: 1.2;
+}
+
+.player-country-card__government {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text);
+  cursor: help;
+}
+
+.player-country-card__leader {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 14px;
+  border-top: 1px solid var(--border);
+  cursor: help;
+}
+
+.player-country-card__leader-name {
+  font-size: 13px;
+  color: var(--text-h);
+}
+
+.player-country-card__leader-role {
+  font-weight: 600;
+}
+
+.player-country-card__leader-party {
+  font-size: 11px;
+  color: var(--text);
+}
+
+.player-country-card__trends {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+}
+
+.player-country-card__trend {
+  display: grid;
+  grid-template-columns: 64px 1fr 52px;
+  align-items: center;
+  gap: 8px;
+  cursor: help;
+}
+
+.player-country-card__trend-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text);
+}
+
+.player-country-card__trend-value {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-h);
+  text-align: right;
+}
+
+.player-country-card__trend.is-negative .player-country-card__trend-value {
+  color: var(--danger);
+}
+
+.player-country-card__ideology {
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--text-h);
+  border-top: 1px solid var(--border);
+  cursor: help;
+}
+
+.player-country-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+}
+
+.player-country-card__chip {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  white-space: nowrap;
+}
+
+.player-country-card__chip--notice {
+  background: rgba(245, 158, 11, 0.10);
+  color: #c97a00;
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
+.player-country-card__chip--warning {
+  background: rgba(245, 158, 11, 0.18);
+  color: #c97a00;
+  border-color: rgba(245, 158, 11, 0.65);
+}
+
+.player-country-card__chip--critical {
+  background: rgba(214, 51, 108, 0.12);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.player-country-card__chip--decree {
+  /* Default accent treatment is already correct; explicit rule kept so a
+   * future colour theme can branch on decree-vs-warning without touching
+   * the base chip class. */
+}
+
+/* Reduced-motion: the card has no animation today, but disable the cursor
+ * affordance flicker if a future revision adds a hover transition. */
+@media (prefers-reduced-motion: reduce) {
+  .player-country-card,
+  .player-country-card__trend {
+    transition: none;
+  }
+}

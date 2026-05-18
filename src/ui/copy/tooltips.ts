@@ -206,6 +206,22 @@ export const TOOLTIPS = {
   },
 
   // -----------------------------------------------------------------------
+  // PlayerCountryCard surfaces (T-035)
+  // -----------------------------------------------------------------------
+  'country.banner': {
+    title: 'Country banner',
+    body: 'The country\'s banner colour — one of the visual cues that will identify it on the Phase 3 world map. In Phase 1 it is decorative; in Phase 3 it is how you tell allies from rivals at a glance.',
+  },
+  'country.leader': {
+    title: 'Leader',
+    body: 'The head of state, listed with role and party. The party affiliation is flavour in Phase 1; it gains mechanical weight in Phase 2 when elections arrive.',
+  },
+  'country.ideology': {
+    title: 'National ideology',
+    body: 'The weighted mean of every POP\'s ideology, weighted by population size. A single progressive ↔ conservative axis in Phase 1 — Phase 2 splits this into a multi-axis vector that drives elections and party formation.',
+  },
+
+  // -----------------------------------------------------------------------
   // Derived metrics — POPs
   // -----------------------------------------------------------------------
   'pop.income': {

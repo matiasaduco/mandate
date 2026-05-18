@@ -22,6 +22,14 @@ export type HeadOfState = {
   name: string
   /** Flavor in P1; mechanical from P2+. */
   party: string
+  /**
+   * Role label (e.g. `"President"`, `"Prime Minister"`, `"General Secretary"`).
+   * T-035 — surfaced by the PlayerCountryCard so the leader chip reads
+   * "President Elena Vorra" rather than the bare name. Flavor in P1; mechanical
+   * in P2+ when government_type drives role-specific powers. The Tick Pipeline
+   * does NOT read this field — it is identity-only metadata.
+   */
+  role: string
 }
 
 export type Country = {
@@ -36,6 +44,15 @@ export type Country = {
   neighbors: string[]
   government_type: GovernmentType
   head_of_state: HeadOfState
+  /**
+   * Banner / accent colour for this country, stored as a CSS-compatible string
+   * (hex like `'#aa3bff'` or any other CSS color). T-035 — read by the
+   * PlayerCountryCard for the top stripe; Phase 3 will reuse the same field
+   * on the world map per-country. The Tick Pipeline does NOT read this field —
+   * it is identity-only metadata, safe to change at any time without affecting
+   * the determinism lock.
+   */
+  banner_color: string
 
   // Macro state (mostly derived)
   /** Derived: sum of POP sizes. Owner: POP Types. */
