@@ -65,7 +65,10 @@ describe('T-028 — Save button', () => {
     // we set speed=0 (which the save handler does first) no tick can
     // interleave between the snapshot read and the localStorage write.
     store = createGameStore({ seed: 1 })
-    const tickSpy = vi.spyOn(store!.engine, 'tick')
+    // createGameStore pre-boots an engine, so store.engine is non-null here.
+    // The runtime type is `Engine | null` (T-036) — assertion narrows for the
+    // spy.
+    const tickSpy = vi.spyOn(store!.engine!, 'tick')
     const { getByTestId } = render(<SaveLoadControls store={store!} />)
 
     fireEvent.click(getByTestId('save-button'))
@@ -221,11 +224,14 @@ describe('T-028 — loadState (gameStore action)', () => {
     store.destroy()
 
     // Driving the (now-current) engine directly after destroy must not
-    // feed the store. Issue a decision that would emit PolicyChanged.
-    store.engine.applyDecisions([
+    // feed the store. Issue a decision that would emit PolicyChanged. Engine
+    // handle is `Engine | null` post-T-036; non-null assertion is safe here
+    // because we just confirmed the engine was alive above (loadState built
+    // one).
+    store.engine!.applyDecisions([
       { type: 'slider', slider_id: 'tax_income', value: 30 },
     ])
-    store.engine.tick()
+    store.engine!.tick()
     expect(store.getState().events.length).toBe(baseline)
   })
 })
