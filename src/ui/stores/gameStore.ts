@@ -183,6 +183,33 @@ export type GameStoreState = {
    * paused-menu → playing.
    */
   restartGame: () => void
+
+  // --- T-033 onboarding lifecycle -----------------------------------------
+
+  /**
+   * T-033 — Speed snapshot taken when `startTour()` fires. The onboarding
+   * tour auto-pauses the engine (`setSpeed(0)`) so the player can focus on
+   * the tooltip without ticks landing under them. On tour end the field is
+   * read back and passed to `setSpeed` so the prior cadence is restored —
+   * including the (legal) case where the prior speed was already 0.
+   *
+   * `null` while no tour is active. Idempotent: a duplicate `startTour()`
+   * call while a tour is already running keeps the original snapshot, so a
+   * stray re-mount of the host component never overwrites the "real" prior
+   * speed with the in-tour 0.
+   */
+  priorSpeedBeforeTour: number | null
+  /**
+   * T-033 — Snapshot `speed` into `priorSpeedBeforeTour` and force the
+   * engine to pause (`setSpeed(0)`). No-op if a tour is already active
+   * (priorSpeedBeforeTour !== null) — see field docs.
+   */
+  startTour: () => void
+  /**
+   * T-033 — Restore the speed saved by `startTour()` and clear
+   * `priorSpeedBeforeTour`. No-op if no tour is active.
+   */
+  endTour: () => void
 }
 
 /**
@@ -376,6 +403,9 @@ function createGameStoreInternal(options: InternalFactoryOptions): GameStore {
     // placeholder snapshot is not rendered, so a single seeded sample would
     // be misleading).
     trends: options.boot ? seedTrends(initialEngineState) : emptyTrends(),
+    // T-033 — No tour active at store construction. Set by `startTour()`
+    // and cleared by `endTour()`. See field docs above.
+    priorSpeedBeforeTour: null,
 
     advance: () => {
       // T-036 — guard: no-op if no engine is alive. App code never calls this
@@ -530,6 +560,32 @@ function createGameStoreInternal(options: InternalFactoryOptions): GameStore {
         events: [],
         speed: 0,
         trends: seedTrends(seedState),
+      })
+    },
+
+    // --- T-033 onboarding lifecycle ---------------------------------------
+
+    startTour: () => {
+      // Idempotent: a stray re-mount of the host component must not overwrite
+      // the captured prior speed with the in-tour 0. If a tour is already
+      // active, leave the snapshot alone — `endTour` will still restore the
+      // ORIGINAL prior value.
+      if (get().priorSpeedBeforeTour !== null) return
+      const currentSpeed = get().speed
+      set({
+        priorSpeedBeforeTour: currentSpeed,
+        speed: 0,
+      })
+    },
+
+    endTour: () => {
+      const prior = get().priorSpeedBeforeTour
+      // Defensive: nothing to restore if no tour is active. Clearing a
+      // null-prior is a no-op write.
+      if (prior === null) return
+      set({
+        speed: prior,
+        priorSpeedBeforeTour: null,
       })
     },
   }))
