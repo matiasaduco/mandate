@@ -22,7 +22,7 @@
 // keeps the integration test in sync with App.tsx by structure — adding a
 // panel here is a one-line mirror.
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 
 import { EventFeed } from '@ui/components/EventFeed'
@@ -60,6 +60,15 @@ function PlayerViewShell() {
     </>
   )
 }
+
+// T-036 — The singleton now starts idle (`route.kind === 'menu'`, engine
+// null) so the main-menu flow can boot a fresh run. The Player View
+// acceptance shell expects an engine, so each test boots one with a fixed
+// seed before mounting. This mirrors what MainMenu does in production after
+// the player clicks "Start".
+beforeEach(() => {
+  getGameStore().getState().bootEngine({ seed: 1 })
+})
 
 afterEach(() => {
   cleanup()

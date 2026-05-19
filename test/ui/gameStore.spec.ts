@@ -161,8 +161,11 @@ describe('T-019 — store hygiene', () => {
     store.destroy()
 
     // After destroy, calling the engine handle directly must not feed the store.
-    store.engine.applyDecisions([{ type: 'slider', slider_id: 'tax_income', value: 30 }])
-    store.engine.tick()
+    // `store.engine` is `Engine | null` post-T-036; createGameStore pre-boots,
+    // so it is non-null here. `destroy()` releases the subscription but keeps
+    // the handle accessible (preserves the pre-T-036 contract).
+    store.engine!.applyDecisions([{ type: 'slider', slider_id: 'tax_income', value: 30 }])
+    store.engine!.tick()
     expect(store.getState().events.length).toBe(baseline)
   })
 })
