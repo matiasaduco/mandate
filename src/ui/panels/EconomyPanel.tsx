@@ -297,20 +297,26 @@ export function EconomyPanel({ store }: EconomyPanelProps) {
           </div>
         </Tooltip>
         <div className="economy-panel__sliders">
-          <PreviewedSlider
-            store={resolved}
-            sliderId="tax_income"
-            id="tax_income"
-            label="Income tax"
-            min={TAX_INCOME_RANGE[0]}
-            max={TAX_INCOME_RANGE[1]}
-            value={sliders.tax_income}
-            onCommit={(v) => commitSlider('tax_income', v)}
-            toDecisionValue={(v) => v}
-            formatDisplay={(v) => `${v}%`}
-            recentlyChanged={recentlyChanged.tax_income ?? false}
-            tooltipKey="tax.income"
-          />
+          {/* T-033 — Wrapper carries the `data-tour-id` anchor for step 3 of
+              the onboarding tour. Kept outside the generic <Slider> so the
+              Slider component stays panel-agnostic; the wrapper is a thin
+              `<div>` with no styling impact. */}
+          <div data-tour-id="tax-income-slider">
+            <PreviewedSlider
+              store={resolved}
+              sliderId="tax_income"
+              id="tax_income"
+              label="Income tax"
+              min={TAX_INCOME_RANGE[0]}
+              max={TAX_INCOME_RANGE[1]}
+              value={sliders.tax_income}
+              onCommit={(v) => commitSlider('tax_income', v)}
+              toDecisionValue={(v) => v}
+              formatDisplay={(v) => `${v}%`}
+              recentlyChanged={recentlyChanged.tax_income ?? false}
+              tooltipKey="tax.income"
+            />
+          </div>
           <PreviewedSlider
             store={resolved}
             sliderId="tax_corporate"

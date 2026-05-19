@@ -326,9 +326,9 @@ export function PoliticsPanel({ store }: PoliticsPanelProps) {
       >
         <h3 id="politics-decrees-heading">Decrees</h3>
         <div className="politics-panel__decrees">
-          {DECREE_IDS_RENDER_ORDER.map((decreeId) => {
+          {DECREE_IDS_RENDER_ORDER.map((decreeId, idx) => {
             const entry = DECREE_CATALOG_P1[decreeId]
-            return (
+            const button = (
               <DecreeButton
                 key={decreeId}
                 decreeId={decreeId}
@@ -337,6 +337,18 @@ export function PoliticsPanel({ store }: PoliticsPanelProps) {
                 onIssue={issueDecree}
               />
             )
+            // T-033 — Anchor the onboarding tour's "Decrees" step to the first
+            // decree button. Wrapped in a `<div>` rather than threading a
+            // `data-tour-id` prop into DecreeButton — the wrapper keeps the
+            // generic button component panel-agnostic.
+            if (idx === 0) {
+              return (
+                <div key={decreeId} data-tour-id="decree-button">
+                  {button}
+                </div>
+              )
+            }
+            return button
           })}
         </div>
       </section>

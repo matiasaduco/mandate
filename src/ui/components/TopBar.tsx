@@ -152,6 +152,7 @@ export function TopBar({ store }: TopBarProps) {
           role="group"
           aria-label="Simulation speed"
           data-testid="speed-control"
+          data-tour-id="speed-control"
           tabIndex={0}
         >
           {SPEEDS.map((s) => {
