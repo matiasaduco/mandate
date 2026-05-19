@@ -9,13 +9,19 @@
 // resizable cards anchored to the surface; layout persists to localStorage
 // under `mandate.layout.v1` (independent of T-028's save format).
 //
+// T-036 — App-level routing on `route.kind`. The shell decides which top-level
+// screen to render: MainMenu when idle, the dashboard when playing, and the
+// PauseOverlay layered on top when `paused-menu`. Esc during `playing` opens
+// the pause overlay; Esc during `paused-menu` is handled by the overlay
+// itself (resume or close confirm).
+//
 // The store is the singleton — `getGameStore()` returns the same instance for
 // every component on the page. Restart works by tearing down that singleton
 // (`resetGameStoreSingleton()` inside `<PostmortemScreen />`) and bumping
 // `resetKey` here so the dashboard subtree re-mounts. The bump forces every
 // child that resolves the singleton to pick up the freshly-constructed one.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import './App.css'
 
@@ -25,6 +31,8 @@ import { PlayerCountryCard } from '@ui/components/PlayerCountryCard'
 import { TopBar } from '@ui/components/TopBar'
 import { WarningBanner } from '@ui/components/WarningBanner'
 import { useTickLoop } from '@ui/hooks/useTickLoop'
+import { MainMenu } from '@ui/screens/MainMenu'
+import { PauseOverlay } from '@ui/screens/PauseOverlay'
 import { PostmortemScreen } from '@ui/screens/PostmortemScreen'
 import { getGameStore } from '@ui/stores/gameStore'
 
@@ -44,6 +52,11 @@ function AppContent({ onRestart }: AppContentProps) {
   const store = getGameStore()
   useTickLoop(store)
 
+  // T-036 — Top-level route. Drives which top-level surface renders. We
+  // select with `s.route.kind` so re-renders fire only on route transitions,
+  // not on every snapshot tick.
+  const routeKind = store((s) => s.route.kind)
+
   // Subscribe to just `game_over` so the dashboard ↔ postmortem swap fires
   // only on the transition, not on every snapshot update.
   const gameOver = store((s) => s.snapshot.game_over)
@@ -57,6 +70,30 @@ function AppContent({ onRestart }: AppContentProps) {
   const approvalTrend = store((s) => s.trends.approval)
   const treasuryTrend = store((s) => s.trends.treasury)
 
+  // T-036 — Esc during `playing` opens the pause overlay. Esc during
+  // `paused-menu` is handled by the overlay itself (which closes the confirm
+  // modal first if open, else resumes). We attach at the window level so
+  // any focused element catches the key.
+  useEffect(() => {
+    if (routeKind !== 'playing') return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        store.getState().openPauseMenu()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [routeKind, store])
+
+  // --- Route branches ----------------------------------------------------
+
+  if (routeKind === 'menu') {
+    // The MainMenu screen owns its own layout — no TopBar / sidebar.
+    return <MainMenu store={store} />
+  }
+
+  // Playing or paused-menu: dashboard is mounted. Pause overlay layered on
+  // top when route is paused-menu.
   return (
     <>
       <TopBar />
@@ -88,6 +125,7 @@ function AppContent({ onRestart }: AppContentProps) {
           </div>
         </main>
       )}
+      {routeKind === 'paused-menu' && <PauseOverlay store={store} />}
     </>
   )
 }

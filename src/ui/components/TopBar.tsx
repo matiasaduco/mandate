@@ -176,6 +176,19 @@ export function TopBar({ store }: TopBarProps) {
       {/* T-028 — Save / Load controls. Pauses the engine before each action
          so the mid-tick safety invariant is trivially satisfied. */}
       <SaveLoadControls store={resolved} />
+
+      {/* T-036 — Menu button. Opens the pause overlay (also reachable via
+         Esc, wired in App.tsx). Owns its own click handler — the overlay
+         itself dispatches the resume / restart / quit actions. */}
+      <button
+        type="button"
+        className="topbar__menu-btn"
+        onClick={() => resolved.getState().openPauseMenu()}
+        data-testid="topbar-menu-button"
+        aria-label="Open menu"
+      >
+        Menu
+      </button>
     </header>
   )
 }
