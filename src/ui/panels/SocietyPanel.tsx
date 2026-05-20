@@ -151,7 +151,7 @@ export function SocietyPanel({ store }: SocietyPanelProps) {
           </tr>
         </thead>
         <tbody>
-          {orderedPops.map((pop) => {
+          {orderedPops.map((pop, popIdx) => {
             // % of total population. Defensive: degenerate state (population
             // == 0) would otherwise NaN out — fall back to "–%".
             const sizePct =
@@ -180,6 +180,12 @@ export function SocietyPanel({ store }: SocietyPanelProps) {
                 key={pop.pop_type}
                 data-testid={`society-row-${pop.pop_type}`}
                 data-pop-type={pop.pop_type}
+                /* T-033 — Anchor the onboarding tour's "Society / POP row"
+                   step to whichever POP renders first (varies with sort
+                   mode). Only the first row carries the attribute so the
+                   joyride anchor query (`[data-tour-id="society-pop-row"]`)
+                   resolves to exactly one element. */
+                data-tour-id={popIdx === 0 ? 'society-pop-row' : undefined}
               >
                 <th scope="row" className="society-panel__pop-name">
                   {formatTitle(pop.pop_type.split('_').join(' '))}

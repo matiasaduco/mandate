@@ -31,6 +31,7 @@ import { PlayerCountryCard } from '@ui/components/PlayerCountryCard'
 import { TopBar } from '@ui/components/TopBar'
 import { WarningBanner } from '@ui/components/WarningBanner'
 import { useTickLoop } from '@ui/hooks/useTickLoop'
+import { useOnboarding } from '@ui/onboarding/useOnboarding'
 import { MainMenu } from '@ui/screens/MainMenu'
 import { PauseOverlay } from '@ui/screens/PauseOverlay'
 import { PostmortemScreen } from '@ui/screens/PostmortemScreen'
@@ -51,6 +52,12 @@ function AppContent({ onRestart }: AppContentProps) {
   // newly-constructed singleton.
   const store = getGameStore()
   useTickLoop(store)
+  // T-033 — Mount the onboarding hook. It gates itself on the
+  // `mandate.onboarding.v1` flag + the engine tick count; the returned
+  // `TourElement` is `null` until the tour actually fires (after the first
+  // tick on a fresh localStorage). Rendered into the dashboard branch below
+  // so the joyride anchors are all in scope.
+  const { TourElement } = useOnboarding({ store })
 
   // T-036 — Top-level route. Drives which top-level surface renders. We
   // select with `s.route.kind` so re-renders fire only on route transitions,
@@ -126,6 +133,9 @@ function AppContent({ onRestart }: AppContentProps) {
         </main>
       )}
       {routeKind === 'paused-menu' && <PauseOverlay store={store} />}
+      {/* T-033 — Joyride overlay portal. Returns `null` while the tour is
+          inactive; the dashboard subtree renders normally underneath. */}
+      {TourElement}
     </>
   )
 }

@@ -72,6 +72,7 @@ export function EventFeed({ store, events, limit, heading }: EventFeedProps) {
       <aside
         className="event-feed event-feed--empty"
         data-testid="event-feed"
+        data-tour-id="event-feed"
         aria-label="Event feed"
       >
         <h3 className="event-feed__heading">{heading ?? 'Events'}</h3>
@@ -83,7 +84,12 @@ export function EventFeed({ store, events, limit, heading }: EventFeedProps) {
   }
 
   return (
-    <aside className="event-feed" data-testid="event-feed" aria-label="Event feed">
+    <aside
+      className="event-feed"
+      data-testid="event-feed"
+      data-tour-id="event-feed"
+      aria-label="Event feed"
+    >
       <h3 className="event-feed__heading">{heading ?? 'Events'}</h3>
       <ul className="event-feed__list">
         {visible.map((event, idx) => {

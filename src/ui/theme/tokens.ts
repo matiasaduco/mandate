@@ -127,3 +127,30 @@ export const RESET_LAYOUT_KEYBIND: Keybind = {
   shift: true,
   meta: true,
 }
+
+// --- T-033 — Z-index registry ---------------------------------------------
+//
+// Centralized stacking constants so the onboarding tour overlay can be sized
+// against the existing UI layers without inlining a magic number. The CSS in
+// `src/App.css` carries the equivalent literals for its own selectors; this
+// module is the authoritative reference for JS-side code (react-joyride's
+// `options.zIndex`).
+//
+// Rationale (locked by the T-033 brief, Resolved Decision #2):
+//   - Floating panels render under `PanelLayer` and live at the bottom of the
+//     stack inside the panels host.
+//   - The tour overlay must sit ABOVE panels so the spotlight cutout works,
+//     and BELOW the warning banner so a treasury-crisis banner still wins
+//     visual priority during a tutorial.
+//
+// The numeric values here intentionally do NOT match the CSS z-index literals
+// 1:1 — react-joyride uses a fresh stacking context via a portal, so any
+// value distinct from the in-document layers is sufficient as long as the
+// invariant `Z_INDEX_PANEL < Z_INDEX_TOUR < Z_INDEX_WARNING_BANNER` holds in
+// effective rendered order. The existing CSS uses 90 (pause overlay), 100
+// (tooltips, menu-stub), 110 (warning banner); joyride's overlay portal
+// stacks against the document root so a value of 50 is enough to clear panel
+// content (which has no explicit z-index inside the panels host).
+export const Z_INDEX_PANEL = 10
+export const Z_INDEX_TOUR = 50
+export const Z_INDEX_WARNING_BANNER = 100

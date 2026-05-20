@@ -202,6 +202,7 @@ export function PlayerCountryCard({
     <aside
       className="player-country-card"
       data-testid="player-country-card"
+      data-tour-id="player-country-card"
       aria-label={`${country.name} — country card`}
     >
       {/* Banner stripe — colour comes from `country.banner_color` so per-country
