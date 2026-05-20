@@ -164,3 +164,71 @@ describe('T-036 — Quit to menu autosaves and clears the engine', () => {
     expect(window.localStorage.getItem('mandate.save.v1')).not.toBeNull()
   })
 })
+
+describe('T-037 — PauseOverlay Settings and Help buttons', () => {
+  it('clicking Settings opens the Settings modal inside the overlay', () => {
+    store = setupPausedStore()
+    render(<PauseOverlay store={store} />)
+
+    fireEvent.click(screen.getByTestId('pause-settings'))
+
+    // Settings modal is now visible.
+    expect(screen.getByTestId('settings')).toBeInTheDocument()
+    // The pause overlay itself is no longer visible (Settings replaced it).
+    expect(screen.queryByTestId('pause-overlay')).toBeNull()
+  })
+
+  it('clicking Help opens the Glossary modal inside the overlay', () => {
+    store = setupPausedStore()
+    render(<PauseOverlay store={store} />)
+
+    fireEvent.click(screen.getByTestId('pause-help'))
+
+    // Glossary modal is now visible.
+    expect(screen.getByTestId('glossary')).toBeInTheDocument()
+    expect(screen.queryByTestId('pause-overlay')).toBeNull()
+  })
+
+  it('closing Settings from the pause overlay returns to the overlay (not playing)', () => {
+    store = setupPausedStore()
+    render(<PauseOverlay store={store} />)
+
+    fireEvent.click(screen.getByTestId('pause-settings'))
+    expect(screen.getByTestId('settings')).toBeInTheDocument()
+
+    // Close the Settings modal — should return to the pause overlay.
+    fireEvent.click(screen.getByTestId('settings-close'))
+
+    expect(screen.queryByTestId('settings')).toBeNull()
+    expect(screen.getByTestId('pause-overlay')).toBeInTheDocument()
+    // Route is still paused-menu, not playing.
+    expect(store.getState().route.kind).toBe('paused-menu')
+  })
+
+  it('closing Glossary from the pause overlay returns to the overlay', () => {
+    store = setupPausedStore()
+    render(<PauseOverlay store={store} />)
+
+    fireEvent.click(screen.getByTestId('pause-help'))
+    fireEvent.click(screen.getByTestId('glossary-close'))
+
+    expect(screen.queryByTestId('glossary')).toBeNull()
+    expect(screen.getByTestId('pause-overlay')).toBeInTheDocument()
+    expect(store.getState().route.kind).toBe('paused-menu')
+  })
+
+  it('Esc from Settings returns to the overlay, not to playing', () => {
+    store = setupPausedStore()
+    render(<PauseOverlay store={store} />)
+
+    fireEvent.click(screen.getByTestId('pause-settings'))
+    expect(screen.getByTestId('settings')).toBeInTheDocument()
+
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Escape' })
+    })
+
+    // After Esc inside Settings the route should still be paused.
+    expect(store.getState().route.kind).toBe('paused-menu')
+  })
+})

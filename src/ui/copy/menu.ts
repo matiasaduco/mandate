@@ -134,6 +134,98 @@ export const MENU_COPY = {
   },
 
   // -----------------------------------------------------------------------
+  // Settings screen — T-037.
+  // -----------------------------------------------------------------------
+  'settings.heading': {
+    title: 'Settings',
+  },
+  'settings.section.speed': {
+    title: 'Default tick speed',
+    body: 'The speed the engine boots at when you start a new game.',
+  },
+  'settings.section.tutorial': {
+    title: 'Tutorial',
+    body: 'Reset the tutorial flag so the tour re-runs on your next session.',
+  },
+  'settings.section.layout': {
+    title: 'Panel layout',
+    body: 'Restore all four panels to their factory default positions.',
+  },
+  'settings.section.language': {
+    title: 'Language',
+    body: 'Interface language.',
+  },
+  'settings.replay.label': {
+    title: 'Replay tutorial',
+    body: 'Clears the completion flag. The tour re-runs the next time you start a session.',
+  },
+  'settings.replay.confirmation': {
+    title: 'Tutorial reset.',
+    body: 'It runs again on your next session — start a new game (or quit + continue) to see it.',
+  },
+  'settings.resetLayout.label': {
+    title: 'Reset panel layout',
+    body: 'Restores all panels to their default positions. Takes effect on the next reload.',
+  },
+  'settings.resetLayout.confirmation': {
+    title: 'Layout reset.',
+    body: 'Panels return to default positions on the next reload.',
+  },
+  'settings.language.en': {
+    title: 'English',
+  },
+  'settings.language.es': {
+    title: 'Español',
+  },
+  'settings.language.es.banner': {
+    title: 'Spanish not yet available',
+    body: 'Spanish is coming in Phase 5. The interface will display in English until then.',
+  },
+  'settings.speed.pause': {
+    title: 'Pause',
+    body: 'Start every new game paused.',
+  },
+  'settings.speed.1x': {
+    title: '1×',
+    body: 'Normal speed (default).',
+  },
+  'settings.speed.2x': {
+    title: '2×',
+    body: 'Double speed.',
+  },
+  'settings.speed.4x': {
+    title: '4×',
+    body: 'Maximum speed.',
+  },
+
+  // -----------------------------------------------------------------------
+  // Glossary / help screen — T-037.
+  // -----------------------------------------------------------------------
+  'glossary.heading': {
+    title: 'Help & glossary',
+    body: 'Definitions for every simulation concept. Search by term or description.',
+  },
+  'glossary.search.placeholder': {
+    title: 'Search…',
+  },
+  'glossary.empty': {
+    title: 'No matches',
+    body: 'Try a shorter or different search term.',
+  },
+
+  // -----------------------------------------------------------------------
+  // Pause overlay Settings / Help entries (added by T-037).
+  // -----------------------------------------------------------------------
+  'pause.action.settings': {
+    title: 'Settings',
+    body: 'Default speed, tutorial, layout.',
+  },
+  'pause.action.help': {
+    title: 'Help & glossary',
+    body: 'Definitions and game concepts.',
+  },
+
+  // -----------------------------------------------------------------------
   // Autosave error indicator (non-blocking, shown after Quit to menu when
   // localStorage.setItem throws — usually quota exceeded).
   // -----------------------------------------------------------------------
