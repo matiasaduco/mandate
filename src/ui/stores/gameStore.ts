@@ -149,8 +149,18 @@ export type GameStoreState = {
    * the `playing` route. If an engine is already alive it is torn down first
    * (unsubscribe) so the new one's events flow into a clean store. Resets
    * `events`, `trends`, `prevSnapshot` to fresh-boot shape.
+   *
+   * T-037 — `initialSpeed` is an optional override for the starting tick
+   * speed. When omitted the store defaults to 0 (paused). MainMenu reads
+   * `loadSettings().defaultTickSpeed` and passes it here so the "default
+   * tick speed" setting takes effect on new-game boot without the store
+   * depending on `mandate.settings.v1` directly.
    */
-  bootEngine: (options: { seed: number; initialState?: EngineState }) => void
+  bootEngine: (options: {
+    seed: number
+    initialState?: EngineState
+    initialSpeed?: number
+  }) => void
   /**
    * T-036 — Construct a fresh engine from a serialized save string. Throws
    * `SaveLoadError` (re-thrown from `deserialize`) on parse / version
@@ -470,19 +480,22 @@ function createGameStoreInternal(options: InternalFactoryOptions): GameStore {
 
     // --- T-036 lifecycle actions ----------------------------------------
 
-    bootEngine: ({ seed, initialState }) => {
+    bootEngine: ({ seed, initialState, initialSpeed }) => {
       // Tear down any existing engine so we start from a clean slate.
       teardownEngine()
       const seedState = initialState ?? createAureliaState()
       engine = createEngine(seedState, { seed })
       unsubscribe = subscribeEventBuffer(engine)
       boundStore.engine = engine
+      // T-037 — use the caller-supplied speed (from settings) when provided;
+      // default to 0 (paused) when absent, preserving pre-T-037 behavior.
+      const bootSpeed = initialSpeed ?? 0
       set({
         route: { kind: 'playing', seed, startedAt: Date.now() },
         snapshot: seedState,
         prevSnapshot: null,
         events: [],
-        speed: 0,
+        speed: bootSpeed,
         trends: seedTrends(seedState),
       })
     },

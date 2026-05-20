@@ -34,6 +34,7 @@ import {
   pickRandomSeed,
   type GameStore,
 } from '@ui/stores/gameStore'
+import { loadSettings } from '@ui/theme/settings'
 
 /**
  * Lowest accepted seed value. The PRNG (`mulberry32`) is defined for any
@@ -137,7 +138,12 @@ export function MainMenu({ store }: MainMenuProps) {
     } else {
       seed = pickRandomSeed()
     }
-    resolved.getState().bootEngine({ seed })
+    // T-037 — read the persisted default speed so the engine boots at the
+    // player's preferred cadence. The store does NOT read settings directly;
+    // the call-site passes the value as `initialSpeed` to keep the store's
+    // dependency graph clean (see Resolved Decision #1 in the brief).
+    const { defaultTickSpeed } = loadSettings()
+    resolved.getState().bootEngine({ seed, initialSpeed: defaultTickSpeed })
   }
 
   const handleContinue = () => {

@@ -88,7 +88,8 @@ describe('T-036 — Settings and Help stubs are keyboard-reachable and Esc-dismi
 
     fireEvent.click(screen.getByTestId('settings-button'))
     expect(screen.getByTestId('settings')).toBeInTheDocument()
-    expect(screen.getByTestId('settings').textContent).toContain('Settings (T-037)')
+    // T-037 replaced the stub — the heading is now the real "Settings" title.
+    expect(screen.getByTestId('settings').textContent).toContain('Settings')
 
     act(() => {
       fireEvent.keyDown(window, { key: 'Escape' })

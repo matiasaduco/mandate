@@ -212,7 +212,9 @@ describe('T-033 AC#1 — fresh localStorage auto-launches the tour after the fir
     expect(document.getElementById('react-joyride-portal')).not.toBeNull()
     // Engine speed was pinned to 0 by startTour.
     expect(store.getState().speed).toBe(0)
-    expect(store.getState().priorSpeedBeforeTour).toBe(0)
+    // T-037 — bootEngine now reads defaultTickSpeed from settings (default: 1).
+    // startTour() saved that prior speed before pinning to 0.
+    expect(store.getState().priorSpeedBeforeTour).toBe(1)
   })
 
   it('does NOT launch when mandate.onboarding.v1 is already marked completed', () => {
